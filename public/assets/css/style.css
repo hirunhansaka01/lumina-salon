@@ -896,6 +896,14 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .footer-bottom a { color: rgba(255, 252, 246, 0.72); }
 .footer-bottom a:hover { color: var(--secondary); }
+.footer-bottom .footer-legal { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0 10px; }
+.footer-bottom .credit { color: rgba(255, 252, 246, 0.38); display: inline-flex; align-items: baseline; gap: 5px; }
+.footer-bottom .credit-mark { color: var(--secondary); font-weight: 500; letter-spacing: 0.01em; opacity: .85; }
+@media (max-width: 560px) {
+  .footer-bottom { gap: 10px; align-items: flex-start; }
+  .footer-bottom .footer-legal { display: block; }
+  .footer-bottom .credit { display: block; margin-top: 4px; }
+}
 .footer-social { display: flex; gap: 8px; }
 .footer-social a {
   width: 36px; height: 36px; border-radius: 50%;

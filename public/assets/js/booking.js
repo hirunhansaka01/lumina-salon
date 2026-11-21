@@ -6,6 +6,7 @@
   const H = window.Hearth;
 
   const state = {
+    studio: null,
     services: [],
     stylists: [],
     service: null,
@@ -81,7 +82,7 @@
   function renderServices() {
     const mount = dom.servicePicks;
     if (!state.services.length) {
-      mount.innerHTML = `<div class="empty">${H.icon('alert')}<p class="body-md">The menu could not load. Please call the studio on (555) 019-8234.</p></div>`;
+      mount.innerHTML = `<div class="empty">${H.icon('alert')}<p class="body-md">The menu could not load. Please call the studio${state.studio?.phone ? ' on ' + H.esc(state.studio.phone) : ''}.</p></div>`;
       return;
     }
     mount.innerHTML = state.services.map((s) => `
@@ -209,7 +210,7 @@
         dom.slotArea.innerHTML = `<div class="empty" style="padding:24px">
           ${H.icon('calendar')}
           <p class="body-md">Fully booked on ${H.dateLong(state.date)}. Try another day — or join the waitlist by calling the studio.</p>
-          <a class="btn btn-sm btn-outline" href="tel:+15550198234">Call (555) 019-8234</a>
+          <a class="btn btn-sm btn-outline" href="${(state.studio?.phone || '').replace(/[^0-9+]/g, '') ? 'tel:' + state.studio.phone.replace(/[^0-9+]/g, '') : '/contact'}">Call ${H.esc(state.studio?.phone || 'the studio')}</a>
         </div>`;
         return;
       }
@@ -312,7 +313,7 @@
       <div class="summary-row"><span class="k">${H.icon('calendar')}When</span><span class="v">${H.dateLong(a.date || state.date)}<br /><span class="dim">${H.time12(a.time || state.time)} – ${H.time12(a.end_time || '')}</span></span></div>
       <div class="summary-row"><span class="k">${H.icon('clock')}Duration</span><span class="v">${H.duration(a.duration_minutes || state.service?.duration_minutes || 45)}</span></div>
       <div class="summary-total"><span class="label">Estimated total</span><span class="value">${H.money((a.price || 0) * 100, { cents: false })}</span></div>
-      <p class="body-sm dim mt-md">A confirmation is on its way to ${H.esc(res.client?.email || '')}. Need to change something? Call (555) 019-8234 — free up to 24 hours before.</p>`;
+      <p class="body-sm dim mt-md">A confirmation is on its way to ${H.esc(res.client?.email || '')}. Need to change something? Call ${H.esc(st.phone || 'the studio')}${st.cancellation_hours ? ` — free up to ${H.esc(String(st.cancellation_hours))} hours before` : ''}.</p>`;
     H.qs('#mobile-sum')?.classList.remove('is-visible');
     H.hydrate(wrap);
     H.toast('Appointment reserved — check your inbox.', { type: 'success' });
@@ -374,9 +375,16 @@
       H.reveal();
     } catch (err) {
       H.toast(err.message, { type: 'error' });
-      dom.servicePicks.innerHTML = `<div class="empty">${H.icon('alert')}<p class="body-md">We could not load the booking tools. Please call the studio on (555) 019-8234.</p></div>`;
+      dom.servicePicks.innerHTML = `<div class="empty">${H.icon('alert')}<p class="body-md">We could not load the booking tools. Please call the studio${state.studio?.phone ? ' on ' + H.esc(state.studio.phone) : ''}.</p></div>`;
     }
   }
 
-  document.addEventListener('DOMContentLoaded', boot);
-})();
+  /* studio settings, so confirmation copy never hardcodes a phone or window */
+  async function loadStudio() {
+    try { const { studio } = await H.api.get('/api/studio'); state.studio = studio; }
+    catch { /* the page still books without it */ }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { loadStudio(); boot(); });
+})();      const st = state.studio || {};
+

@@ -294,6 +294,18 @@
 
     reveal();
     initAnnouncement();
+    initStudioDetails();
+  }
+
+  /* Pages without an announcement bar still need the studio's real details. */
+  function initStudioDetails() {
+    if (qs('[data-announcement]')) return;   // initAnnouncement already did it
+    api.get('/api/studio').then(({ studio }) => {
+      if (!studio) return;
+      setPhone(document, studio.phone);
+      setAddress(document, studio.address);
+      setEmail(document, studio.email);
+    }).catch(() => {});
   }
 
   /* ── Announcement bar (any page; beats the settings fallback) ─ */
@@ -307,11 +319,42 @@
     try { localStorage.setItem(ANNOUNCE_KEY, String(text).trim()); } catch { /* private mode */ }
   }
 
+  /** Phone numbers become a dialable link and a readable label. */
+  function setPhone(root, phone) {
+    if (!root || !phone) return;
+    const dial = String(phone).replace(/[^0-9+]/g, '');
+    qsa('[data-studio-phone]', root).forEach((n) => { n.textContent = phone; });
+    qsa('[data-studio-phone-link]', root).forEach((n) => { n.href = 'tel:' + dial; });
+  }
+
+  /** Address text, honouring the line break the design uses. */
+  function setAddress(root, address) {
+    if (!address) return;
+    const parts = String(address).split(',').map((x) => x.trim()).filter(Boolean);
+    qsa('[data-studio-address]', root).forEach((n) => {
+      /* a heading spans one line; the list and paragraph forms break after the street */
+      const multiline = n.tagName === 'P' || n.tagName === 'LI';
+      n.innerHTML = multiline && parts.length > 1
+        ? `${esc(parts[0])}<br />${esc(parts.slice(1).join(', '))}`
+        : esc(parts.join(', '));
+    });
+  }
+
+  function setEmail(root, email) {
+    if (!email) return;
+    qsa('[data-studio-email]', root).forEach((n) => { n.textContent = email; });
+    qsa('[data-studio-email-link]', root).forEach((n) => { n.href = 'mailto:' + email; });
+  }
+
   function initAnnouncement() {
     const bar = qs('[data-announcement]');
-    if (!bar) return;
     api.get('/api/studio').then(({ studio }) => {
-      if (!studio || !studio.announcement) return;
+      if (!studio) return;
+      /* studio details drive every page, not just the bar */
+      setPhone(document, studio.phone);
+      setAddress(document, studio.address);
+      setEmail(document, studio.email);
+      if (!bar || !studio.announcement) return;
       /* already dismissed this exact message — stay quiet */
       if (announcementSeen(studio.announcement)) return;
       const text = qs('[data-announcement-text]', bar);

@@ -10,8 +10,8 @@
 <link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2?v=066710ce" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2?v=d5c53a50" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/css/style.css?v=01a2a4ec" />
-<script defer src="/assets/js/core.js?v=01c7e05a"></script>
-<script defer src="/assets/js/booking.js?v=21e39579"></script>
+<script defer src="/assets/js/core.js?v=3626111e"></script>
+<script defer src="/assets/js/booking.js?v=5b325fa1"></script>
 </head>
 <body>
 <a href="#main" class="sr-only">Skip to content</a>
@@ -42,7 +42,7 @@
         <a class="nav-link" href="contact.html">Contact</a>
       </div>
       <div class="nav-actions">
-        <a class="nav-phone" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+        <a class="nav-phone" href="tel:+15550198234" data-studio-phone-link><span data-icon="phone"></span><span data-studio-phone>(555) 019-8234</span></a>
         <a class="btn btn-sm" href="booking.html">Book Now</a>
         <button class="btn btn-icon nav-toggle" data-drawer-open aria-label="Open menu" aria-expanded="false" aria-controls="site-drawer"><span data-icon="menu"></span></button>
       </div>
@@ -62,8 +62,8 @@
     <a class="drawer-link" href="contact.html">Contact <span data-icon="arrowUpRight"></span></a>
   </nav>
   <div class="drawer-foot">
-    <a class="btn btn-block" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
-    <p class="body-sm center" style="margin-top:8px">742 Evergreen Terrace, Springfield<br />Tue–Sat, 9am–7pm</p>
+    <a class="btn btn-block" href="tel:+15550198234" data-studio-phone-link><span data-icon="phone"></span><span data-studio-phone>(555) 019-8234</span></a>
+    <p class="body-sm center" style="margin-top:8px"><span data-studio-address>742 Evergreen Terrace, Springfield</span><br />Tue–Sat, 9am–7pm</p>
   </div>
 </div>
 
@@ -246,12 +246,12 @@
             <div class="trust-row">
               <div class="trust-item"><span data-icon="shield"></span><span>Free changes or cancellation up to 24 hours before.</span></div>
               <div class="trust-item"><span data-icon="cup"></span><span>Complimentary tea, coffee and small treats.</span></div>
-              <div class="trust-item"><span data-icon="pin"></span><span>742 Evergreen Terrace — street parking nearby.</span></div>
+              <div class="trust-item"><span data-icon="pin"></span><span><span data-studio-address>742 Evergreen Terrace</span> — street parking nearby.</span></div>
             </div>
             <hr class="rule-soft mt-md" style="margin-bottom:16px" />
             <div class="row-between">
               <span class="body-sm dim">Prefer to talk?</span>
-              <a class="btn-link" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+              <a class="btn-link" href="tel:+15550198234" data-studio-phone-link><span data-icon="phone"></span><span data-studio-phone>(555) 019-8234</span></a>
             </div>
           </div>
         </aside>
@@ -280,7 +280,7 @@
       <div class="footer-col">
         <h4>Visit</h4>
         <ul class="footer-list">
-          <li>742 Evergreen Terrace<br />Springfield</li>
+          <li data-studio-address>742 Evergreen Terrace<br />Springfield</li>
           <li>Tuesday – Saturday<br />9am – 7pm</li>
           <li><a href="/contact">Parking &amp; directions</a></li>
         </ul>

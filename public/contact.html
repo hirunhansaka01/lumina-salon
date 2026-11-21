@@ -10,7 +10,7 @@
 <link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2?v=066710ce" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2?v=d5c53a50" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/css/style.css?v=01a2a4ec" />
-<script defer src="/assets/js/core.js?v=01c7e05a"></script>
+<script defer src="/assets/js/core.js?v=3626111e"></script>
 <script defer src="/assets/js/contact.js?v=83b561f4"></script>
 </head>
 <body>
@@ -42,7 +42,7 @@
         <a class="nav-link" href="contact.html">Contact</a>
       </div>
       <div class="nav-actions">
-        <a class="nav-phone" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+        <a class="nav-phone" href="tel:+15550198234" data-studio-phone-link><span data-icon="phone"></span><span data-studio-phone>(555) 019-8234</span></a>
         <a class="btn btn-sm" href="booking.html">Book Now</a>
         <button class="btn btn-icon nav-toggle" data-drawer-open aria-label="Open menu" aria-expanded="false" aria-controls="site-drawer"><span data-icon="menu"></span></button>
       </div>
@@ -63,7 +63,7 @@
   </nav>
   <div class="drawer-foot">
     <a class="btn btn-block" href="booking.html">Book an appointment</a>
-    <a class="btn btn-outline btn-block" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+    <a class="btn btn-outline btn-block" href="tel:+15550198234" data-studio-phone-link><span data-icon="phone"></span><span data-studio-phone>(555) 019-8234</span></a>
   </div>
 </div>
 
@@ -90,7 +90,7 @@
                 <span class="feature-icon" data-icon="pin"></span>
                 <div>
                   <h3>Address</h3>
-                  <p>742 Evergreen Terrace<br />Springfield</p>
+                  <p data-studio-address>742 Evergreen Terrace<br />Springfield</p>
                   <p class="body-sm dim" style="margin-top:6px">Street parking on Evergreen, plus the Elm Street lot two minutes away.</p>
                 </div>
               </div>
@@ -106,7 +106,7 @@
                 <span class="feature-icon" data-icon="phone"></span>
                 <div>
                   <h3>Talk to us</h3>
-                  <p><a class="underline-quiet" href="tel:+15550198234">(555) 019-8234</a><br /><a class="underline-quiet" href="mailto:hello@luminasalon.com">hello@luminasalon.com</a></p>
+                  <p><a class="underline-quiet" href="tel:+15550198234" data-studio-phone-link data-studio-phone>(555) 019-8234</a><br /><a class="underline-quiet" href="mailto:hello@luminasalon.com" data-studio-email-link data-studio-email>hello@luminasalon.com</a></p>
                 </div>
               </div>
               <div class="contact-card">
@@ -227,7 +227,7 @@
       <div class="footer-col">
         <h4>Visit</h4>
         <ul class="footer-list">
-          <li>742 Evergreen Terrace<br />Springfield</li>
+          <li data-studio-address>742 Evergreen Terrace<br />Springfield</li>
           <li>Tuesday – Saturday<br />9am – 7pm</li>
           <li><a href="/contact">Parking &amp; directions</a></li>
         </ul>

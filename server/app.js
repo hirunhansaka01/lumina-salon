@@ -19,7 +19,9 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
-app.use(express.json({ limit: '256kb' }));
+/* image uploads arrive as base64 data URLs, so the JSON body needs headroom */
+const JSON_LIMIT = process.env.API_JSON_LIMIT || '6mb';
+app.use(express.json({ limit: JSON_LIMIT }));
 app.use(express.urlencoded({ extended: false, limit: '256kb' }));
 app.use(cookieParser());
 

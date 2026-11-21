@@ -7,6 +7,9 @@ const { requireAdmin } = require('../lib/auth');
 const { getSettings, invalidate, NUMERIC, BOOLEAN } = require('../lib/settings');
 const { isValidISODate, isValidTime, toMinutes, fromMinutes, salonDate, salonTime, addDays, weekdayIndex, prettyDate } = require('../lib/time');
 const { STATUSES } = require('../lib/schedule');
+const mailer = require('../lib/mailer');
+const storage = require('../lib/storage');
+const { studioContext, appointmentContext } = require('../lib/mailContext');
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -98,6 +101,34 @@ router.get('/overview', wrap(async (_req, res) => {
     tomorrow_count: (tomorrowRows || []).length,
   });
 }));
+
+/* ─────────────── Emailing clients about their appointment ─────────── */
+
+async function emailClientAbout(appointmentRow, kind) {
+  try {
+    if (!mailer.isConfigured()) return;
+    const client = appointmentRow.clients;
+    if (!client || !client.email) return;
+    const settings = await getSettings();
+    const studio = await studioContext(settings);
+    const ctx = appointmentContext({
+      appointment: appointmentRow,
+      client,
+      service: appointmentRow.services || { id: null, name: 'Appointment', duration_minutes: appointmentRow.duration_minutes, price_cents: appointmentRow.price_cents },
+      stylist: appointmentRow.stylists || { id: null, name: 'the studio' },
+    });
+    await mailer.sendBookingStatus({
+      client: ctx.client,
+      appointment: ctx.appointment,
+      service: ctx.service,
+      stylist: ctx.stylist,
+      studio,
+      kind,
+    });
+  } catch (err) {
+    console.warn('[admin] client email failed:', err.message);
+  }
+}
 
 /* ─────────────────────────── Appointments ─────────────────────────── */
 
@@ -209,6 +240,11 @@ router.patch('/appointments/:id/status', wrap(async (req, res) => {
   }
 
   await log(req.user, `appointment_${status}`, data.clients ? `${data.clients.name} · ${data.time}` : data.reference);
+
+  if (!(req.body || {}).silent) {
+    if (status === 'confirmed') await emailClientAbout(data, 'confirmed');
+    if (status === 'cancelled') await emailClientAbout(data, 'cancelled');
+  }
   res.json({ ok: true, appointment: data });
 }));
 
@@ -233,6 +269,10 @@ router.patch('/appointments/:id', wrap(async (req, res) => {
 
   const { data } = await db.from('appointments').update(patch).eq('id', current.id).select(APPT_SELECT).single();
   await log(req.user, 'appointment_updated', data.clients ? data.clients.name : data.reference);
+
+  const moved = (patch.appointment_date && patch.appointment_date !== current.appointment_date)
+    || (patch.time && patch.time !== current.time);
+  if (moved && !(req.body || {}).silent) await emailClientAbout(data, 'rescheduled');
   res.json({ ok: true, appointment: data });
 }));
 
@@ -445,6 +485,79 @@ router.put('/availability', wrap(async (req, res) => {
   res.json({ ok: true, message: 'Working hours saved.' });
 }));
 
+/* ─────────────────────────── Service photos ─────────────────────────── */
+
+/** Upload a replacement photo for a service; returns the public URL. */
+router.post('/services/:id/photo', wrap(async (req, res) => {
+  const { data: service } = await db.from('services').select('id,name,image_url').eq('id', req.params.id).maybeSingle();
+  if (!service) throw new ApiError(404, 'Service not found.');
+  const dataUrl = (req.body || {}).data_url;
+  if (!dataUrl) throw new ApiError(400, 'No image was sent.');
+
+  const upload = await storage.uploadDataUrl(dataUrl, service.name);
+  if (!upload.ok) throw new ApiError(400, upload.error, 'UPLOAD_FAILED');
+
+  const { data } = await db
+    .from('services')
+    .update({ image_url: upload.url })
+    .eq('id', service.id)
+    .select('*')
+    .single();
+  await log(req.user, 'service_photo_updated', `${service.name} → ${upload.path}`);
+  res.json({ ok: true, service: data, url: upload.url, message: 'Photo updated — the website picks it up immediately.' });
+}));
+
+/** Remove a service photo (falls back to the typographic tile). */
+router.delete('/services/:id/photo', wrap(async (req, res) => {
+  const { data } = await db.from('services').update({ image_url: null }).eq('id', req.params.id).select('*').single();
+  await log(req.user, 'service_photo_removed', data.name);
+  res.json({ ok: true, service: data });
+}));
+
+/* ─────────────────────────── Email ─────────────────────────── */
+
+router.get('/email/status', wrap(async (_req, res) => {
+  const c = mailer.config();
+  const configured = mailer.isConfigured();
+  res.json({
+    ok: true,
+    email: {
+      configured,
+      host: configured ? c.host : null,
+      port: configured ? c.port : null,
+      user: configured ? c.user : null,
+      from: configured ? `${c.fromName} <${c.fromEmail}>` : null,
+      notify: configured ? c.notify : null,
+    },
+  });
+}));
+
+router.post('/email/test', wrap(async (req, res) => {
+  const to = clean((req.body || {}).to, 160) || req.user.email;
+  const check = await mailer.verify();
+  if (!check.ok) throw new ApiError(400, `SMTP could not connect: ${check.error}`, 'SMTP_ERROR');
+  const settings = await getSettings(true);
+  const studio = await studioContext(settings);
+  const result = await mailer.send({
+    to,
+    subject: 'Lumina Salon · your email system is live',
+    template: 'announcement',
+    replyTo: studio.email,
+    data: {
+      name: studio.name, address: studio.address, phone: studio.phone, email: studio.email,
+      preheader: 'A test from your studio admin.',
+      headline: 'Your email system is working',
+      intro: `This is a test message from the ${studio.name} admin — sent through <strong>${clean(mailer.config().host, 60)}</strong>.`,
+      body: 'From now on, clients receive a beautifully typeset confirmation the moment they book, and you get a quiet alert in the studio inbox.',
+      highlights: ['Booking receipts go out automatically', 'You are notified of each new request', 'Replies land straight in your Gmail'],
+      buttonLabel: 'Open the studio admin',
+      buttonUrl: `${studio.url}/admin`,
+    },
+  });
+  if (!result.ok) throw new ApiError(502, `Send failed: ${result.error}`, 'SMTP_ERROR');
+  res.json({ ok: true, message: `Test email sent to ${to}.`, id: result.id });
+}));
+
 /* ─────────────────────────── Settings ─────────────────────────── */
 
 router.get('/settings', wrap(async (_req, res) => {
@@ -465,6 +578,96 @@ router.put('/settings', wrap(async (req, res) => {
   invalidate();
   await log(req.user, 'settings_updated', Object.keys(patch).join(', '));
   res.json({ ok: true, settings: await getSettings(true) });
+}));
+
+/* ─────────────────────────── Announcements ─────────────────────────── */
+
+router.get('/announcements', wrap(async (_req, res) => {
+  const { data } = await db.from('announcements').select('*').order('created_at', { ascending: false });
+  res.json({ ok: true, announcements: data || [] });
+}));
+
+function announcementFrom(body = {}) {
+  const b = body || {};
+  const starts = clean(b.starts_at, 40) || null;
+  const ends = clean(b.ends_at, 40) || null;
+  return {
+    title: clean(b.title, 120) || 'Studio announcement',
+    message: clean(b.message, 400) || null,
+    link_label: clean(b.link_label, 60) || null,
+    link_url: clean(b.link_url, 300) || null,
+    variant: ['info', 'gold', 'plum', 'urgent'].includes(b.variant) ? b.variant : 'info',
+    starts_at: starts,
+    ends_at: ends,
+    is_active: b.is_active === undefined ? true : !!b.is_active,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+router.post('/announcements', wrap(async (req, res) => {
+  const patch = announcementFrom(req.body);
+  if (!patch.message) throw new ApiError(400, 'Write the announcement text first.');
+  if (patch.starts_at && patch.ends_at && patch.ends_at < patch.starts_at) {
+    throw new ApiError(400, 'The end date must come after the start date.');
+  }
+  const { data } = await db.from('announcements').insert(patch).select('*').single();
+  await log(req.user, 'announcement_created', data.title);
+  res.status(201).json({ ok: true, announcement: data });
+}));
+
+router.patch('/announcements/:id', wrap(async (req, res) => {
+  const patch = announcementFrom(req.body);
+  if (patch.starts_at && patch.ends_at && patch.ends_at < patch.starts_at) {
+    throw new ApiError(400, 'The end date must come after the start date.');
+  }
+  const { data } = await db.from('announcements').update(patch).eq('id', req.params.id).select('*').single();
+  await log(req.user, 'announcement_updated', data.title);
+  res.json({ ok: true, announcement: data });
+}));
+
+router.delete('/announcements/:id', wrap(async (req, res) => {
+  await db.from('announcements').delete().eq('id', req.params.id);
+  await log(req.user, 'announcement_deleted', req.params.id);
+  res.json({ ok: true });
+}));
+
+/** Email one announcement to every client who has booked before. */
+router.post('/announcements/:id/send', wrap(async (req, res) => {
+  const { data: announcement } = await db.from('announcements').select('*').eq('id', req.params.id).maybeSingle();
+  if (!announcement) throw new ApiError(404, 'Announcement not found.');
+  if (!mailer.isConfigured()) throw new ApiError(400, 'Email is not configured yet.', 'SMTP_ERROR');
+
+  const { data: clients } = await db.from('clients').select('id,name,email').order('name');
+  const recipients = (clients || []).filter((c) => c && c.email);
+  if (!recipients.length) throw new ApiError(400, 'There are no clients to email yet.');
+  if ((req.body || {}).dry_run) {
+    return res.json({ ok: true, dry_run: true, recipients: recipients.map((c) => c.email) });
+  }
+
+  const settings = await getSettings(true);
+  const studio = await studioContext(settings);
+  let sent = 0; const failures = [];
+  for (const c of recipients) {
+    const result = await mailer.send({
+      to: c.email,
+      subject: announcement.title,
+      template: 'announcement',
+      replyTo: studio.email,
+      data: {
+        name: studio.name, address: studio.address, phone: studio.phone, email: studio.email,
+        preheader: announcement.message || announcement.title,
+        headline: announcement.title,
+        intro: `Hello ${String(c.name || '').split(' ')[0]},`,
+        body: announcement.message,
+        buttonLabel: announcement.link_label || 'Book a chair',
+        buttonUrl: announcement.link_url || `${studio.url}/booking`,
+      },
+    });
+    if (result.ok) sent += 1; else failures.push({ email: c.email, error: result.error });
+  }
+  await db.from('announcements').update({ sent_at: new Date().toISOString(), sent_count: sent }).eq('id', announcement.id);
+  await log(req.user, 'announcement_sent', `${announcement.title} → ${sent} clients`);
+  res.json({ ok: true, sent, failed: failures.length, failures: failures.slice(0, 5) });
 }));
 
 /* ─────────────────────────── Messages & reviews ─────────────────────────── */

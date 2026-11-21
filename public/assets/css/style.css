@@ -807,6 +807,16 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 }
 .announce a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 252, 246, 0.4); }
 .announce a:hover { text-decoration-color: var(--secondary); }
+/* announcement variants — the studio picks one per message */
+.announce[data-variant="gold"] { background: #F4E3C1; color: #4A3711; }
+.announce[data-variant="gold"] .icon { color: #8A6413; }
+.announce[data-variant="gold"] a { text-decoration-color: rgba(74, 55, 17, 0.35); }
+.announce[data-variant="plum"] { background: var(--tertiary); color: #FFF7FC; }
+.announce[data-variant="plum"] .icon { color: #FFE1F1; }
+.announce[data-variant="plum"] a { text-decoration-color: rgba(255, 247, 252, 0.45); }
+.announce[data-variant="urgent"] { background: var(--danger); color: #FFF8F6; }
+.announce[data-variant="urgent"] .icon { color: #FFE0DA; }
+.announce[data-variant="urgent"] a { text-decoration-color: rgba(255, 248, 246, 0.5); }
 
 /* Footer */
 .site-footer {
@@ -1689,4 +1699,31 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   }
   .reveal { opacity: 1; transform: none; }
   .marquee-track { animation: none; }
+}
+
+
+/* ── Admin: email + announcement panels ──────────────────────────── */
+.mail-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mail-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.mail-dot.is-on { background: var(--success); box-shadow: 0 0 0 4px rgba(33, 123, 68, 0.14); }
+.mail-dot.is-off { background: var(--danger); box-shadow: 0 0 0 4px rgba(190, 66, 63, 0.14); }
+.mail-kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 0.8125rem; }
+.mail-kv dt { color: var(--ink-3); }
+.mail-kv dd { margin: 0; color: var(--ink); font-weight: 500; word-break: break-all; }
+.ann-card { border-left: 3px solid var(--primary); }
+.ann-card[data-variant="gold"] { border-left-color: var(--secondary); }
+.ann-card[data-variant="plum"] { border-left-color: var(--tertiary); }
+.ann-card[data-variant="urgent"] { border-left-color: var(--danger); }
+.ann-preview {
+  border-radius: var(--r-md); padding: 10px 14px; font-size: 0.8125rem;
+  background: var(--inverse); color: var(--on-inverse); text-align: center;
+}
+.ann-preview[data-variant="gold"] { background: #F4E3C1; color: #4A3711; }
+.ann-preview[data-variant="plum"] { background: var(--tertiary); color: #FFF7FC; }
+.ann-preview[data-variant="urgent"] { background: var(--danger); color: #FFF8F6; }
+.ann-chip { font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.service-photo-edit { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start; }
+.service-photo-edit img, .service-photo-edit .ph-empty {
+  width: 96px; height: 72px; border-radius: 10px; object-fit: cover;
+  background: var(--surface-3); display: grid; place-items: center; color: var(--ink-3);
 }

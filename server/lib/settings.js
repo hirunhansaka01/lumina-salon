@@ -14,7 +14,7 @@ const DEFAULTS = {
   studio_address: '742 Evergreen Terrace, Springfield',
   studio_phone: '(555) 019-8234',
   studio_email: 'hello@luminasalon.com',
-  notify_email: 'studio@luminasalon.com',
+  notify_email: process.env.NOTIFY_EMAIL || 'studio@luminasalon.com',
   announcement: '',
 };
 

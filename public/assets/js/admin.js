@@ -88,7 +88,7 @@
     });
 
     const initial = (location.hash || '#overview').replace('#', '');
-    navigate(['overview', 'appointments', 'services', 'clients', 'messages', 'hours', 'settings'].includes(initial) ? initial : 'overview');
+    navigate(['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'email', 'hours', 'settings'].includes(initial) ? initial : 'overview');
   }
 
   /* ── router ──────────────────────────────────────────────────── */
@@ -98,6 +98,8 @@
     services: ['Services & pricing', 'Your menu, durations and prices'],
     clients: ['Clients & formulas', 'Notes, history and colour recipes'],
     messages: ['Inbox', 'Enquiries from the website'],
+    announcements: ['Announcements', 'What the website says, and when'],
+    email: ['Email', 'Your sending account and delivery'],
     hours: ['Working hours', 'Weekly availability for each stylist'],
     settings: ['Settings', 'Booking rules, studio details and security'],
   };
@@ -119,6 +121,8 @@
       if (view === 'services') await renderServices();
       if (view === 'clients') await renderClients();
       if (view === 'messages') await renderMessages();
+      if (view === 'announcements') await renderAnnouncements();
+      if (view === 'email') await renderEmail();
       if (view === 'hours') await renderHours();
       if (view === 'settings') await renderSettings();
       H.hydrate(main());
@@ -487,6 +491,64 @@
     }));
   }
 
+  /** File picker → Supabase Storage → image_url on the form. */
+  function wireServicePhoto(host, service) {
+    const file = H.qs('#s-image-file', host);
+    const input = H.qs('#s-image', host);
+    const prev = H.qs('#s-image-prev', host);
+    const note = H.qs('#s-image-note', host);
+    const clear = H.qs('#s-image-clear', host);
+
+    const paint = (url) => {
+      prev.innerHTML = url
+        ? `<img src="${H.esc(url)}" alt="" />`
+        : `<span class="ph-empty">${H.icon('image', 'icon')}</span>`;
+      H.hydrate(prev);
+    };
+
+    input.addEventListener('change', () => {
+      const v = input.value.trim();
+      paint(v || null);
+      host.dataset.photoCleared = '';
+    });
+
+    if (clear) clear.addEventListener('click', () => {
+      input.value = '';
+      paint(null);
+      note.textContent = 'The menu will show the typographic tile instead.';
+    });
+
+    file.addEventListener('change', () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      if (f.size > 4 * 1024 * 1024) { H.toast('That image is larger than 4 MB — please compress it first.', { type: 'error' }); file.value = ''; return; }
+      if (!service || !service.id) {
+        H.toast('Save the service first, then upload its photo.', { type: 'info' });
+        file.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = async () => {
+        note.textContent = 'Uploading…';
+        try {
+          const r = await H.api.post(`/api/admin/services/${service.id}/photo`, { data_url: reader.result });
+          input.value = r.url;
+          paint(r.url);
+          note.textContent = 'Photo uploaded — the website already shows it.';
+          H.toast('Photo updated.');
+          if (state.services) {
+            const row = state.services.find((x) => x.id === service.id);
+            if (row) row.image_url = r.url;
+          }
+        } catch (err) {
+          note.textContent = err.message;
+          H.toast('Upload failed.', { type: 'error' });
+        } finally { file.value = ''; }
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
   function openServiceModal(service) {
     const isEdit = !!service;
     const s = service || { name: '', category: 'Haircuts', description: '', duration_minutes: 45, price_cents: 0, badge: '', is_featured: false, is_active: true };
@@ -527,11 +589,20 @@
             </div>
             <div class="field">
               <label class="field-label" for="s-image">Service photo</label>
-              <div class="row gap-sm" style="align-items:center">
-                <span class="pick-thumb" id="s-image-prev">${s.image_url ? `<img src="${H.esc(s.image_url)}" alt="" />` : ''}</span>
-                <input class="input" id="s-image" name="image_url" value="${H.esc(s.image_url || '')}" placeholder="/assets/services/your-photo.jpg" />
+              <div class="service-photo-edit">
+                <span id="s-image-prev">${s.image_url
+                  ? `<img src="${H.esc(s.image_url)}" alt="" />`
+                  : `<span class="ph-empty">${H.icon('image', 'icon')}</span>`}</span>
+                <div class="stack gap-sm">
+                  <div class="row gap-sm row-wrap">
+                    <label class="btn btn-sm btn-outline" for="s-image-file">${H.icon('upload')}Upload photo</label>
+                    <input id="s-image-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif" hidden />
+                    ${s.image_url ? `<button class="btn btn-sm btn-ghost" type="button" id="s-image-clear">Use tile instead</button>` : ''}
+                  </div>
+                  <input class="input" id="s-image" name="image_url" value="${H.esc(s.image_url || '')}" placeholder="https://… or /assets/services/photo.jpg" />
+                  <p class="body-sm dim" id="s-image-note">JPG, PNG, WebP or AVIF · up to 4 MB. Uploads go straight to the site.</p>
+                </div>
               </div>
-              <p class="body-sm dim" style="margin-top:6px">Drop a new file into <code>public/assets/services/</code> and paste its path here. Leave blank for the typographic tile.</p>
             </div>
             <label class="check-row"><input type="checkbox" name="is_featured" ${s.is_featured ? 'checked' : ''} /> <span>Feature on the home page</span></label>
             <div class="row-between mt-sm">
@@ -542,6 +613,7 @@
         </div>
       </div>`);
     openOverlay(host);
+    wireServicePhoto(host, s);
     host.querySelector('#service-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const f = new FormData(e.currentTarget);
@@ -954,6 +1026,281 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
+     ANNOUNCEMENTS — the bar at the top of the website, with a window
+     ══════════════════════════════════════════════════════════════ */
+  const VARIANTS = [
+    { key: 'info', label: 'Forest (default)' },
+    { key: 'gold', label: 'Gold — seasonal' },
+    { key: 'plum', label: 'Plum — editorial' },
+    { key: 'urgent', label: 'Red — notice' },
+  ];
+
+  const fmtWhen = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  const toLocalInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const liveState = (a) => {
+    if (!a.is_active) return { label: 'Paused', cls: 'chip-outline' };
+    const now = Date.now();
+    if (a.starts_at && new Date(a.starts_at).getTime() > now) return { label: 'Scheduled', cls: 'chip-primary' };
+    if (a.ends_at && new Date(a.ends_at).getTime() < now) return { label: 'Expired', cls: 'chip-outline' };
+    return { label: 'Live now', cls: 'chip-gold' };
+  };
+
+  async function renderAnnouncements() {
+    const { announcements } = await H.api.get('/api/admin/announcements');
+    state.announcements = announcements;
+    H.qs('#page-sub').textContent = 'The bar above the website header — schedule it, email it, or both';
+
+    main().innerHTML = `
+      <div class="row-between" style="align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <p class="body-md" style="max-width:62ch;margin:0">
+          Anything live shows on every page. Give it a start and end time and it appears and disappears on its own —
+          ideal for “Now booking December colour”, holiday hours, or a last-minute opening.
+        </p>
+        <button class="btn" id="add-announcement">${H.icon('plus')}New announcement</button>
+      </div>
+
+      ${announcements.length ? `<div class="stack gap-md">${announcements.map((a) => {
+        const live = liveState(a);
+        return `
+        <article class="card ann-card" data-variant="${H.esc(a.variant)}">
+          <div class="row-between" style="align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="min-width:0;flex:1">
+              <div class="row gap-sm row-wrap" style="align-items:center">
+                <h3 class="title-md">${H.esc(a.title)}</h3>
+                <span class="chip chip-sm ${live.cls}">${live.label}</span>
+                ${a.sent_at ? `<span class="chip chip-sm chip-outline">Emailed to ${a.sent_count}</span>` : ''}
+              </div>
+              <div class="ann-preview mt-sm" data-variant="${H.esc(a.variant)}">${H.esc(a.message || a.title)}</div>
+              <p class="body-sm dim" style="margin-top:10px">
+                ${a.starts_at ? `Starts ${H.esc(fmtWhen(a.starts_at))}` : 'Starts immediately'}
+                ·
+                ${a.ends_at ? `Ends ${H.esc(fmtWhen(a.ends_at))}` : 'Runs until paused'}
+                ${a.link_url ? ` · Links to ${H.esc(a.link_url)}` : ''}
+              </p>
+            </div>
+            <div class="row gap-sm" style="flex-wrap:wrap">
+              <button class="btn btn-sm btn-outline" data-edit-ann="${a.id}">Edit</button>
+              <button class="btn btn-sm btn-ghost" data-toggle-ann="${a.id}">${a.is_active ? 'Pause' : 'Resume'}</button>
+              <button class="btn btn-sm btn-ghost" data-send-ann="${a.id}">Email to clients</button>
+              <button class="btn btn-icon" style="width:34px;height:34px" data-del-ann="${a.id}" title="Delete">${H.icon('trash','icon')}</button>
+            </div>
+          </div>
+        </article>`;
+      }).join('')}</div>` : `
+      <div class="empty">
+        ${H.icon('sparkle')}
+        <h3 class="headline-sm">No announcements yet</h3>
+        <p class="body-md" style="max-width:40ch;margin-inline:auto">
+          Create one and it appears instantly. Example: “Now booking December colour — bespoke balayage and gloss appointments open.”
+        </p>
+        <button class="btn btn-sm" data-example>Use that example</button>
+      </div>`}
+    `;
+
+    H.qs('#add-announcement').addEventListener('click', () => openAnnouncement());
+    const ex = H.qs('[data-example]');
+    if (ex) ex.addEventListener('click', () => openAnnouncement({
+      title: 'Now booking December colour',
+      message: 'Now booking December colour — bespoke balayage and gloss appointments open.',
+      link_label: 'Book a chair',
+      link_url: '/booking',
+      variant: 'gold',
+      is_active: true,
+    }));
+    H.qsa('[data-edit-ann]').forEach((b) => b.addEventListener('click', () => openAnnouncement(announcements.find((a) => a.id === b.dataset.editAnn))));
+    H.qsa('[data-toggle-ann]').forEach((b) => b.addEventListener('click', async () => {
+      const a = announcements.find((x) => x.id === b.dataset.toggleAnn);
+      await H.api.patch(`/api/admin/announcements/${a.id}`, { ...a, is_active: !a.is_active });
+      H.toast(a.is_active ? 'Announcement paused.' : 'Announcement is live again.');
+      renderAnnouncements();
+    }));
+    H.qsa('[data-del-ann]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('Delete this announcement? The bar disappears from the site.')) return;
+      await H.api.del(`/api/admin/announcements/${b.dataset.delAnn}`);
+      H.toast('Announcement deleted.');
+      renderAnnouncements();
+    }));
+    H.qsa('[data-send-ann]').forEach((b) => b.addEventListener('click', async () => {
+      const a = announcements.find((x) => x.id === b.dataset.sendAnn);
+      const check = await H.api.post(`/api/admin/announcements/${a.id}/send`, { dry_run: true }).catch((e) => ({ error: e.message }));
+      if (check.error) return H.toast(check.error, { type: 'error' });
+      const list = check.recipients || [];
+      if (!confirm(`Email “${a.title}” to ${list.length} client${list.length === 1 ? '' : 's'}?`)) return;
+      b.disabled = true; b.textContent = 'Sending…';
+      try {
+        const r = await H.api.post(`/api/admin/announcements/${a.id}/send`, {});
+        H.toast(`Sent to ${r.sent} client${r.sent === 1 ? '' : 's'}${r.failed ? ` · ${r.failed} failed` : ''}.`);
+        renderAnnouncements();
+      } catch (err) { H.toast(err.message, { type: 'error' }); b.disabled = false; b.textContent = 'Email to clients'; }
+    }));
+  }
+
+  function openAnnouncement(a) {
+    const isEdit = !!a;
+    const d = a || { title: '', message: '', link_label: 'Book a chair', link_url: '/booking', variant: 'info', is_active: true };
+    const host = H.el(`
+      <div class="modal-backdrop" role="presentation">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ann-title">
+          <button class="btn btn-icon modal-close" data-close aria-label="Close">${H.icon('close')}</button>
+          <h2 class="headline-md" id="ann-title">${isEdit ? 'Edit announcement' : 'New announcement'}</h2>
+          <p class="body-sm dim mt-sm">Shows in the bar above the header on every page.</p>
+          <form class="stack gap-md mt-lg" id="ann-form">
+            <div class="field"><label class="field-label" for="a-title">Heading <span class="dim">(used as the email subject)</span></label>
+              <input class="input" id="a-title" name="title" value="${H.esc(d.title)}" placeholder="Now booking December colour" required /></div>
+            <div class="field"><label class="field-label" for="a-message">Message</label>
+              <textarea class="textarea" id="a-message" name="message" rows="2" style="min-height:70px" placeholder="Now booking December colour — bespoke balayage and gloss appointments open.">${H.esc(d.message || '')}</textarea></div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label" for="a-link-label">Link label</label>
+                <input class="input" id="a-link-label" name="link_label" value="${H.esc(d.link_label || '')}" placeholder="Book a chair" /></div>
+              <div class="field"><label class="field-label" for="a-link-url">Link URL</label>
+                <input class="input" id="a-link-url" name="link_url" value="${H.esc(d.link_url || '')}" placeholder="/booking" /></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label" for="a-variant">Colour</label>
+                <select class="select" id="a-variant" name="variant">
+                  ${VARIANTS.map((v) => `<option value="${v.key}" ${d.variant === v.key ? 'selected' : ''}>${v.label}</option>`).join('')}
+                </select></div>
+              <div class="field"><label class="field-label" for="a-active">Status</label>
+                <select class="select" id="a-active" name="is_active">
+                  <option value="1" ${d.is_active ? 'selected' : ''}>Active</option>
+                  <option value="0" ${!d.is_active ? 'selected' : ''}>Paused</option>
+                </select></div>
+            </div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label" for="a-starts">Show from <span class="dim">(optional)</span></label>
+                <input class="input" id="a-starts" name="starts_at" type="datetime-local" value="${toLocalInput(d.starts_at)}" /></div>
+              <div class="field"><label class="field-label" for="a-ends">Hide after <span class="dim">(optional)</span></label>
+                <input class="input" id="a-ends" name="ends_at" type="datetime-local" value="${toLocalInput(d.ends_at)}" /></div>
+            </div>
+            <div class="ann-preview" id="a-preview" data-variant="${H.esc(d.variant)}">${H.esc(d.message || d.title || 'Your message appears here')}</div>
+            <div class="row-between mt-sm">
+              <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+              <button class="btn" type="submit">${isEdit ? 'Save changes' : 'Publish announcement'}</button>
+            </div>
+          </form>
+        </div>
+      </div>`);
+    openOverlay(host);
+    H.hydrate(host);
+
+    const msg = H.qs('#a-message', host), prev = H.qs('#a-preview', host), titleIn = H.qs('#a-title', host), variant = H.qs('#a-variant', host);
+    const sync = () => {
+      prev.textContent = msg.value || titleIn.value || 'Your message appears here';
+      prev.dataset.variant = variant.value;
+    };
+    [msg, titleIn, variant].forEach((el) => el.addEventListener('input', sync));
+
+    H.qs('#ann-form', host).addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.currentTarget);
+      const toISO = (v) => (v ? new Date(v).toISOString() : null);
+      const payload = {
+        title: f.get('title'),
+        message: f.get('message'),
+        link_label: f.get('link_label'),
+        link_url: f.get('link_url'),
+        variant: f.get('variant'),
+        is_active: f.get('is_active') === '1',
+        starts_at: toISO(f.get('starts_at')),
+        ends_at: toISO(f.get('ends_at')),
+      };
+      try {
+        if (isEdit) await H.api.patch(`/api/admin/announcements/${a.id}`, payload);
+        else await H.api.post('/api/admin/announcements', payload);
+        H.toast(isEdit ? 'Announcement updated.' : 'Announcement published.');
+        closeOverlay(); renderAnnouncements();
+      } catch (err) { H.toast(err.message, { type: 'error' }); }
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     EMAIL — sending account, connection test
+     ══════════════════════════════════════════════════════════════ */
+  async function renderEmail() {
+    const { email } = await H.api.get('/api/admin/email/status');
+    H.qs('#page-sub').textContent = 'Transactional email for bookings and client notices';
+
+    main().innerHTML = `
+      <div class="grid grid-2" style="align-items:start">
+        <section class="card">
+          <h2 class="title-lg">Sending account</h2>
+          <div class="mail-status mt-md">
+            <span class="mail-dot ${email.configured ? 'is-on' : 'is-off'}"></span>
+            <strong class="title-sm">${email.configured ? 'Connected' : 'Not configured'}</strong>
+            <span class="chip chip-sm ${email.configured ? 'chip-primary' : 'chip-outline'}">${H.esc(email.host || 'no credentials')}</span>
+          </div>
+          ${email.configured ? `
+          <dl class="mail-kv mt-lg">
+            <dt>Server</dt><dd>${H.esc(email.host)}:${email.port}</dd>
+            <dt>Username</dt><dd>${H.esc(email.user)}</dd>
+            <dt>Sends as</dt><dd>${H.esc(email.from)}</dd>
+            <dt>Studio alerts to</dt><dd>${H.esc(email.notify)}</dd>
+          </dl>` : `
+          <p class="body-md mt-md">Add <code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_USER</code> and
+          <code>SMTP_PASS</code> to the Vercel project (Settings → Environment Variables), then redeploy.
+          Nothing is stored in the repository.</p>`}
+        </section>
+
+        <section class="card">
+          <h2 class="title-lg">Send a test</h2>
+          <p class="body-sm dim">Confirms the login works and shows you exactly how a client email looks.</p>
+          <form class="stack gap-md mt-md" id="mail-test-form">
+            <div class="field"><label class="field-label" for="mail-test-to">Send to</label>
+              <input class="input" id="mail-test-to" name="to" type="email" value="${H.esc(state.user.email)}" required /></div>
+            <button class="btn" type="submit">${H.icon('mail')}Send test email</button>
+          </form>
+          <div id="mail-test-out" class="mt-md"></div>
+        </section>
+
+        <section class="card" style="grid-column:1/-1">
+          <h2 class="title-lg">What gets sent, and when</h2>
+          <div class="table-wrap mt-md">
+            <table class="table">
+              <thead><tr><th>Email</th><th>Trigger</th><th>Goes to</th></tr></thead>
+              <tbody>
+                <tr><td>Booking request / confirmation</td><td>Client books online</td><td>Client</td></tr>
+                <tr><td>Booking alert</td><td>Client books online</td><td>Studio inbox</td></tr>
+                <tr><td>Appointment confirmed</td><td>You confirm a request</td><td>Client</td></tr>
+                <tr><td>Appointment moved</td><td>You change the date or time</td><td>Client</td></tr>
+                <tr><td>Appointment cancelled</td><td>You cancel</td><td>Client</td></tr>
+                <tr><td>Website enquiry</td><td>Contact form submitted</td><td>Studio inbox</td></tr>
+                <tr><td>Announcement</td><td>You press “Email to clients”</td><td>Every client with an email</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>`;
+
+    H.qs('#mail-test-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.currentTarget.querySelector('button');
+      const out = H.qs('#mail-test-out');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const r = await H.api.post('/api/admin/email/test', { to: H.qs('#mail-test-to').value });
+        out.innerHTML = `<div class="card card-inset"><p class="body-md">${H.esc(r.message)}</p></div>`;
+        H.toast('Test email sent.');
+      } catch (err) {
+        out.innerHTML = `<div class="card card-inset" style="border-color:var(--danger)"><p class="body-md">${H.esc(err.message)}</p></div>`;
+        H.toast('Send failed.', { type: 'error' });
+      } finally { btn.disabled = false; btn.innerHTML = `${H.icon('mail')}Send test email`; }
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
      WORKING HOURS
      ══════════════════════════════════════════════════════════════ */
   async function renderHours() {
@@ -1064,8 +1411,11 @@
               <div class="field"><label class="field-label" for="set-email">Email</label><input class="input" id="set-email" name="studio_email" type="email" value="${H.esc(settings.studio_email)}" /></div>
             </div>
             <div class="field">
-              <label class="field-label" for="set-announce">Announcement bar</label>
+              <label class="field-label" for="set-announce">Announcement bar <span class="dim">(fallback text)</span></label>
               <input class="input" id="set-announce" name="announcement" value="${H.esc(settings.announcement)}" placeholder="Leave blank to hide the bar" />
+              <p class="body-sm dim" style="margin-top:6px">
+                A live <a href="#announcements">announcement</a> takes precedence — this plain line only shows when none is scheduled.
+              </p>
             </div>
             <button class="btn" type="submit">Save studio details</button>
           </form>

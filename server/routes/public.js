@@ -6,6 +6,8 @@ const { wrap, clean, normEmail, normPhone, requireFields, EMAIL_RE, ApiError } =
 const { getSettings } = require('../lib/settings');
 const { isValidISODate, isValidTime, toMinutes, formatTime12, salonDate, salonTime, addDays, weekdayIndex } = require('../lib/time');
 const { BLOCKING } = require('../lib/schedule');
+const mailer = require('../lib/mailer');
+const { studioContext, appointmentContext } = require('../lib/mailContext');
 
 const router = express.Router();
 
@@ -219,6 +221,50 @@ router.post('/bookings', wrap(async (req, res) => {
     detail: `${service.name} with ${stylist.name} on ${body.date} at ${formatTime12(body.time)}`,
   }).then(() => {}).catch(() => {});
 
+  /* email the client + alert the studio — never blocks the booking */
+  try {
+    const studio = await studioContext(settings);
+    const ctx = appointmentContext({
+      appointment, client, service, stylist,
+    });
+    const [toClient] = await Promise.all([
+      mailer.sendBookingReceived({
+        client: ctx.client,
+        appointment: ctx.appointment,
+        service: ctx.service,
+        stylist: ctx.stylist,
+        studio,
+      }),
+      mailer.sendStudioAlert({
+        to: settings.notify_email,
+        subject: `${status === 'confirmed' ? 'New booking' : 'Booking request'} · ${client.name} · ${formatTime12(body.time)}`,
+        template: 'studio-alert',
+        data: {
+          name: studio.name, address: studio.address, phone: studio.phone, email: studio.email,
+          preheader: `${client.name} booked ${service.name} on ${body.date}.`,
+          headline: status === 'confirmed' ? 'A chair is booked' : 'A booking request is waiting',
+          intro: `${client.name} booked <strong>${service.name}</strong> with ${stylist.name}.`,
+          rows: [
+            { label: 'Client', value: client.name },
+            { label: 'Email', value: client.email },
+            { label: 'Phone', value: client.phone || '—' },
+            { label: 'Service', value: service.name },
+            { label: 'When', value: `${body.date} at ${formatTime12(body.time)}` },
+            { label: 'Status', value: status },
+          ],
+          notes: body.notes,
+          actionLabel: 'Open the studio admin',
+          actionUrl: `${studio.url}/admin`,
+        },
+      }),
+    ]);
+    if (toClient && toClient.error && !toClient.skipped) {
+      console.warn('[booking] client email failed:', toClient.error);
+    }
+  } catch (err) {
+    console.warn('[booking] email step failed:', err.message);
+  }
+
   res.status(201).json({
     ok: true,
     appointment: {
@@ -290,6 +336,33 @@ router.post('/contact', wrap(async (req, res) => {
     detail: clean(body.subject, 160) || 'Website enquiry',
   }).then(() => {}).catch(() => {});
 
+  try {
+    const settings = await getSettings();
+    const studio = await studioContext(settings);
+    await mailer.sendStudioAlert({
+      to: settings.notify_email,
+      subject: `Website enquiry · ${clean(body.name, 60)} · ${clean(body.subject, 60) || 'General'}`,
+      template: 'studio-alert',
+      data: {
+        name: studio.name, address: studio.address, phone: studio.phone, email: studio.email,
+        preheader: `New message from ${clean(body.name, 60)}.`,
+        headline: 'A new enquiry has arrived',
+        intro: `<strong>${clean(body.name, 60)}</strong> sent a message through the website.`,
+        rows: [
+          { label: 'Name', value: clean(body.name, 120) },
+          { label: 'Email', value: normEmail(body.email) },
+          { label: 'Phone', value: normPhone(body.phone) || '—' },
+          { label: 'Subject', value: clean(body.subject, 160) || 'Website enquiry' },
+        ],
+        notes: String(body.message || '').slice(0, 1200),
+        actionLabel: 'Reply from the studio admin',
+        actionUrl: `${studio.url}/admin#messages`,
+      },
+    });
+  } catch (err) {
+    console.warn('[contact] email step failed:', err.message);
+  }
+
   res.status(201).json({ ok: true, id: data.id, message: 'Thank you — your message is with us. We reply within 24 hours.' });
 }));
 
@@ -317,6 +390,22 @@ router.get('/reviews', wrap(async (_req, res) => {
 
 router.get('/studio', wrap(async (_req, res) => {
   const s = await getSettings();
+
+  /* the announcement bar shows the best live scheduled announcement,
+     falling back to the plain settings field */
+  const nowISO = new Date().toISOString();
+  const { data: rows } = await db
+    .from('announcements')
+    .select('id,title,message,link_label,link_url,variant,starts_at,ends_at,is_active')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  const live = (rows || []).find((a) => {
+    if (a.starts_at && a.starts_at > nowISO) return false;
+    if (a.ends_at && a.ends_at < nowISO) return false;
+    return true;
+  });
+
   res.json({
     ok: true,
     studio: {
@@ -324,7 +413,10 @@ router.get('/studio', wrap(async (_req, res) => {
       address: s.studio_address,
       phone: s.studio_phone,
       email: s.studio_email,
-      announcement: s.announcement,
+      announcement: live ? live.message || live.title : s.announcement,
+      announcement_link_label: live ? live.link_label : null,
+      announcement_link_url: live ? live.link_url : null,
+      announcement_variant: live ? live.variant : 'info',
       cancellation_hours: s.cancellation_hours,
       auto_confirm: s.booking_auto_confirm,
     },

@@ -72,9 +72,10 @@ and is referenced from Supabase (`services.image_url`) rather than hard-coded.
 | `services/signature-balayage.jpg` | Signature Balayage |
 | `services/precision-haircut.jpg` | Precision Haircut |
 | `services/gloss-and-toning.jpg` | Gloss & Toning Treatment |
+| `services/signature-balayage.jpg` (shared) | also Root Touch-Up |
 | `services/master-color-retouch.jpg` | Master Color Retouch |
 | `services/deep-conditioning.jpg` | Deep Conditioning Luxury |
-| `services/bridal-updo.jpg` | Bridal Updo Styling **and** Bridal Trial & Day-Of Package |
+| `services/bridal-updo.jpg` | Bridal Updo Styling |
 | `*-thumb.jpg` | 220 px crops for the booking step 1 picker |
 
 Services without a photograph automatically render the typographic tile (studio

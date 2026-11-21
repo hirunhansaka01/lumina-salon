@@ -209,18 +209,40 @@
       items.forEach((i) => i.classList.add('is-in'));
       return;
     }
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
+    // Batch to one paint per frame: fast scrolling (or a fling on mobile) fires
+    // many intersection records at once and can otherwise outrun the main thread.
+    let queue = [];
+    let queued = false;
+    const flush = () => {
+      queued = false;
+      queue.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add('is-in');
           io.unobserve(entry.target);
         }
       });
+      queue = [];
+    };
+    const io = new IntersectionObserver((entries) => {
+      queue.push(...entries);
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(flush);
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
     items.forEach((item, i) => {
       if (!item.style.getPropertyValue('--reveal-delay')) item.style.setProperty('--reveal-delay', `${Math.min(i * 60, 320)}ms`);
       io.observe(item);
     });
+
+    // Safety net — a scroll that lands mid-page (anchor, refresh, fling) can
+    // leave work above the fold unobserved. Nothing is ever allowed to stay
+    // invisible: reveal whatever is still hidden shortly after load.
+    window.setTimeout(() => {
+      qsa('.reveal:not(.is-in)').forEach((el) => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight * 1.6) { el.classList.add('is-in'); io.unobserve(el); }
+      });
+    }, 700);
   }
 
   /* ── Static markup hydration: [data-icon] and [data-stars] ──── */

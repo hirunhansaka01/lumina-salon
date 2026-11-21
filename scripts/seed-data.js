@@ -37,6 +37,7 @@ const services = [
   },
   {
     name: 'Root Touch-Up', slug: 'root-touch-up', category: 'Coloring',
+    image_url: '/assets/services/signature-balayage.jpg',
     description: 'Seamless grey coverage and precise color matching with a soft gloss finish.',
     duration_minutes: 60, price_cents: 9500, badge: 'Essential', sort_order: 60,
   },
@@ -69,7 +70,6 @@ const services = [
   },
   {
     name: 'Bridal Trial & Day-Of Package', slug: 'bridal-package', category: 'Packages',
-    image_url: '/assets/services/bridal-updo.jpg',
     description: 'Trial run, wedding-day styling and touch-up kit — a calm morning, planned in advance.',
     duration_minutes: 150, price_cents: 25000, badge: 'Package', sort_order: 120,
   },

@@ -1,12 +1,38 @@
-# Hearth — Lumina Salon
+<div align="center">
 
-A complete, production-shaped website + studio back office for a boutique hair salon.
+# Lumina Salon
 
-- **Public site** — Home, Services, Booking, Contact (one shared `style.css`, one `core.js`)
-- **Booking engine** — real availability, overlap-safe slot generation, no double booking
-- **Studio admin** — overview dashboard, day sheet with check-in, services & pricing, clients with colour formulas, inbox, working hours, settings
-- **Node.js backend** — Express API (no framework magic), Supabase (Postgres) for data
-- **Design system** — Hearth: Fraunces display serif + DM Sans, cream paper grounds, botanical teal, honey gold, muted plum
+**A salon website that feels like the room.**
+
+Warm paper, deep forest, honey gold — and underneath it, a real booking engine,
+a studio back office, and email a client would actually want to open.
+
+[**salonlumina.vercel.app**](https://salonlumina.vercel.app) · Node · Supabase · Vercel
+
+</div>
+
+---
+
+> Two chairs, one calendar, and a spreadsheet held together with hope. That's how
+> most small salons run. Lumina is what happens when the booking page is as considered
+> as the salon itself: a client picks a real open slot, gets a beautifully typeset
+> confirmation thirty seconds later, and the studio sees the day take shape without
+> touching a spreadsheet. Colour formulas live next to the person's name. Seasonal
+> notices appear on the site on a schedule and quietly retire themselves.
+
+No page builders, no component library, no framework. One stylesheet, vanilla
+JavaScript, an Express API, Postgres in Supabase, and Vercel to serve it.
+
+## What makes it different
+
+| | |
+| --- | --- |
+| **A booking engine, not a form** | Slots are generated from each stylist's real hours, the team break and a minimum-notice rule. Two people clicking the same 10:30 → the second gets a clean `409` and a refreshed grid, never a double booking. |
+| **Email with taste** | Table-layout HTML that survives Gmail and Outlook, with a text fallback. Receipt, confirmation, *reschedule*, cancellation, studio alert and broadcast — credentials live in env vars, never the repo. |
+| **Announcements that expire** | Write "Now booking December colour", give it a start and end time, pick a palette. It shows on every page while it's true, then disappears. One click emails it to every past client. |
+| **Colour formulas, not just appointments** | Every client card carries their history and their recipe — developer, timing, the note that says *never go warmer than 8.1*. |
+| **Photography from the admin** | Upload a service photo straight into object storage from the back office. Vercel's filesystem is read-only, so it goes to Supabase Storage — the URL lands on the service. |
+| **Hearth** | Fraunces + DM Sans, self-hosted woff2, cream `#FAF4EB` grounds, botanical `#005552`, honey `#DEAD55`, muted plum `#9C698B`. One `style.css` for all six pages. |
 
 ---
 

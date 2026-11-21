@@ -86,11 +86,12 @@ async function main() {
     console.log('✓ service:', s.name);
   }
 
-  /* ── reviews ── */
-  const { data: reviewRows } = await db.from('reviews').select('id').limit(1);
-  if (!reviewRows || !reviewRows.length) {
-    for (const r of seed.reviews) await db.from('reviews').insert({ ...r, is_published: true });
-    console.log('✓ reviews:', seed.reviews.length);
+  /* ── reviews (none are seeded — real testimonials only) ── */
+  for (const r of seed.reviews) {
+    const { data: dup } = await db.from('reviews').select('id').eq('client_name', r.client_name).limit(1);
+    if (dup && dup.length) continue;
+    await db.from('reviews').insert({ ...r, is_published: true });
+    console.log('✓ review:', r.client_name);
   }
 
   /* ── settings ── */

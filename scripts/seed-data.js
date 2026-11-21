@@ -80,40 +80,20 @@ const stylists = [
     name: 'Elena Vance', slug: 'elena-vance', title: 'Studio Lead · Cut & Colour',
     bio: 'Fifteen years behind the chair, trained in London and Chicago. Elena is known for soft, wearable shapes and colour that grows out beautifully.',
     specialties: ['Precision cutting', 'Balayage', 'Curl shaping'],
-    avatar_url: '/assets/stylist-elena-thumb.jpg', avatar_initials: 'EV', rating: 4.9, sort_order: 10,
+    avatar_url: '/assets/stylist-elena-thumb.jpg', avatar_initials: 'EV', sort_order: 10,
   },
   {
     name: 'Marcus Chen', slug: 'marcus-chen', title: 'Master Colorist',
     bio: 'A colour specialist with an editorial background. Marcus rescues difficult colours and builds dimension that reads natural in daylight.',
     specialties: ['Dimensional colour', 'Colour correction', 'Gloss & toner'],
-    avatar_url: '/assets/stylist-marcus-thumb.jpg', avatar_initials: 'MC', rating: 5.0, sort_order: 20,
+    avatar_url: '/assets/stylist-marcus-thumb.jpg', avatar_initials: 'MC', sort_order: 20,
   },
 ];
 
 const workingDays = [1, 2, 3, 4, 5]; // Tue → Sat (0 = Monday)
 
-const reviews = [
-  {
-    client_name: 'Sarah Jenkins', location: 'Springfield', rating: 5,
-    quote: 'Elena gave me the best balayage of my life. The whole experience feels like an upscale spa day, complete with wonderful refreshments.',
-    is_featured: true, sort_order: 10,
-  },
-  {
-    client_name: 'David Miller', location: 'Springfield', rating: 5,
-    quote: 'Marcus is a true master colorist. He fixed a bad colour job from another salon and kept my hair feeling incredibly healthy.',
-    is_featured: true, sort_order: 20,
-  },
-  {
-    client_name: 'Chloe Bennett', location: 'Springfield', rating: 5,
-    quote: 'The attention to detail at Lumina Salon is unmatched. From the precise haircut to the warm hospitality, I will never go anywhere else.',
-    is_featured: true, sort_order: 30,
-  },
-  {
-    client_name: 'Amanda Ross', location: 'Springfield', rating: 5,
-    quote: 'I always look forward to my Saturday appointments. The atmosphere is serene and the complimentary tea is a lovely touch.',
-    is_featured: false, sort_order: 40,
-  },
-];
+// No seeded testimonials: reviews are collected from real clients only.
+const reviews = [];
 
 const settings = {
   slot_interval_minutes: '30',
@@ -128,19 +108,10 @@ const settings = {
   announcement: 'Now booking December colour — bespoke balayage and gloss appointments open.',
 };
 
-const clients = [
-  { name: 'Sarah Jenkins', email: 'sarah.jenkins@example.com', phone: '(555) 014-2210', notes: 'Prefers chamomile tea. Loves a soft, lived-in wave.' },
-  { name: 'David Miller', email: 'david.miller@example.com', phone: '(555) 017-3388', notes: 'Sensitive scalp — use the gentle cleanse.' },
-  { name: 'Chloe Bennett', email: 'chloe.bennett@example.com', phone: '(555) 012-7741', notes: 'Bridal client, wedding in April.' },
-  { name: 'Amanda Ross', email: 'amanda.ross@example.com', phone: '(555) 019-1120', notes: 'Saturday regular. Books six weeks ahead.' },
-  { name: 'Priya Raman', email: 'priya.raman@example.com', phone: '(555) 016-5502', notes: 'Deep conditioning every other visit.' },
-  { name: 'Tom Whitfield', email: 'tom.whitfield@example.com', phone: '(555) 011-6689', notes: 'Beard shape every three weeks.' },
-];
+// No seeded clients: the client list starts empty.
+const clients = [];
 
-const formulas = [
-  { email: 'sarah.jenkins@example.com', formula: 'Clay lightener + 20 vol', developer: '20 vol', processing_minutes: 35, notes: 'Tone with 9G + 9NB (1:1) for 15 mins at the basin.' },
-  { email: 'amanda.ross@example.com', formula: '6N + 6WB (30g each)', developer: '20 vol', processing_minutes: 35, notes: 'Root touch-up only — keep the mid-lengths off the colour.' },
-  { email: 'priya.raman@example.com', formula: 'Gloss 8NB + clear (1:2)', developer: '6 vol', processing_minutes: 20, notes: 'Cool violet tone to kill brassiness at the ends.' },
-];
+// No seeded colour formulas: these are recorded per real client.
+const formulas = [];
 
 module.exports = { services, stylists, workingDays, reviews, settings, clients, formulas };

@@ -120,7 +120,7 @@
           <span class="stylist-pick-name">${H.esc(s.name)}</span>
           <span class="stylist-pick-role">${H.esc(s.title || '')}</span>
         </span>
-        <span class="chip chip-sm chip-gold">${Number(s.rating).toFixed(1)}</span>
+        <span class="chip chip-sm chip-gold">Free consult</span>
       </button>`).join('');
 
     H.qsa('[data-stylist]', mount).forEach((btn) => {

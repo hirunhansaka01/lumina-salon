@@ -39,7 +39,7 @@
           <p class="clamp-2">${H.esc(s.description || '')}</p>
           <div class="service-meta">
             <span class="item">${H.icon('clock')}${H.duration(s.duration_minutes)}</span>
-            <span class="item">${H.icon('star')}4.9</span>
+            <span class="item">${H.icon('clock')}${H.esc(s.category)}</span>
             <span class="item">${H.esc(s.category)}</span>
           </div>
           <div class="service-foot">

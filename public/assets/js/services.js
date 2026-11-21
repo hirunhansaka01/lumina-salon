@@ -41,7 +41,7 @@
           <p class="clamp-2">${H.esc(s.description || '')}</p>
           <div class="service-meta">
             <span class="item">${H.icon('clock')}${H.duration(s.duration_minutes)}</span>
-            <span class="item">${H.icon('star')}${s.is_featured ? '4.9' : '4.8'}</span>
+            <span class="item">${H.icon('check')}${s.is_featured ? 'Signature' : 'Available'}</span>
             <span class="item">${H.esc(s.category)}</span>
           </div>
         </div>

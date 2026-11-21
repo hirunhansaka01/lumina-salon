@@ -297,11 +297,23 @@
   }
 
   /* ── Announcement bar (any page; beats the settings fallback) ─ */
+  const ANNOUNCE_KEY = 'lumina.announcement.dismissed';
+
+  /** A dismissal is tied to the message itself, not to "forever". */
+  function announcementSeen(text) {
+    try { return localStorage.getItem(ANNOUNCE_KEY) === String(text).trim(); } catch { return false; }
+  }
+  function rememberAnnouncement(text) {
+    try { localStorage.setItem(ANNOUNCE_KEY, String(text).trim()); } catch { /* private mode */ }
+  }
+
   function initAnnouncement() {
     const bar = qs('[data-announcement]');
     if (!bar) return;
     api.get('/api/studio').then(({ studio }) => {
       if (!studio || !studio.announcement) return;
+      /* already dismissed this exact message — stay quiet */
+      if (announcementSeen(studio.announcement)) return;
       const text = qs('[data-announcement-text]', bar);
       if (text) text.textContent = studio.announcement;
       const link = qs('[data-announcement-link]', bar);
@@ -316,6 +328,18 @@
       }
       if (studio.announcement_variant) bar.dataset.variant = studio.announcement_variant;
       bar.hidden = false;
+
+      const close = qs('[data-announcement-close]', bar);
+      if (close) {
+        close.addEventListener('click', () => {
+          rememberAnnouncement(studio.announcement);
+          bar.classList.add('is-closing');
+          const done = () => { bar.hidden = true; bar.classList.remove('is-closing'); };
+          bar.addEventListener('transitionend', done, { once: true });
+          setTimeout(done, 320);           // fallback if the transition never fires
+          close.blur();
+        });
+      }
     }).catch(() => {});
   }
 

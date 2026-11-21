@@ -98,28 +98,9 @@
     } catch { /* keep the static fallback */ }
   }
 
-  async function loadStudio() {
-    try {
-      const { studio } = await H.api.get('/api/studio');
-      const bar = H.qs('[data-announcement]');
-      if (!studio.announcement || !bar) return;
-      H.qs('[data-announcement-text]', bar).textContent = studio.announcement;
-      const link = H.qs('[data-announcement-link]', bar);
-      if (link) {
-        if (studio.announcement_link_url) {
-          link.href = studio.announcement_link_url;
-          link.textContent = studio.announcement_link_label || 'Find out more';
-          link.hidden = false;
-        } else {
-          link.hidden = true;
-        }
-      }
-      if (studio.announcement_variant) bar.dataset.variant = studio.announcement_variant;
-      bar.hidden = false;
-    } catch { /* silent */ }
-  }
+  /* the announcement bar is owned by core.js so every page behaves the same */
 
   document.addEventListener('DOMContentLoaded', () => {
-    loadStudio(); loadServices(); loadReviews(); loadNextSlot();
+    loadServices(); loadReviews(); loadNextSlot();
   });
 })();

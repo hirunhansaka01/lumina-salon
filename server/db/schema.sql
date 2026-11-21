@@ -267,3 +267,24 @@ begin
   return result;
 end;
 $$ language plpgsql;
+
+-- ── Announcements ─────────────────────────────────────────────────────
+-- The bar above the site header. A row is shown while now() sits inside
+-- [starts_at, ends_at]; a null bound means "no limit on that side".
+create table if not exists announcements (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  message      text,
+  link_label   text,
+  link_url     text,
+  variant      text not null default 'info',
+  starts_at    timestamptz,
+  ends_at      timestamptz,
+  is_active    boolean not null default true,
+  sent_at      timestamptz,
+  sent_count   int not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create index if not exists announcements_window_idx on announcements (is_active, starts_at, ends_at);
+alter table announcements enable row level security;

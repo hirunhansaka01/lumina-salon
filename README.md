@@ -96,6 +96,18 @@ file in `public/assets/services/` and set the path in **Admin → Services & pri
 | `JWT_SECRET` | signing key for admin sessions |
 | `SALON_TIMEZONE` | IANA zone used for "today" and slot logic (default `America/Chicago`) |
 | `SETUP_ADMIN_*` | first admin account created by `scripts/setup-db.js` |
+| `SMTP_HOST` | mail server — `smtp.gmail.com` |
+| `SMTP_PORT` | `587` (STARTTLS) |
+| `SMTP_SECURE` | `false` for 587, `true` for 465 |
+| `SMTP_USER` | the Gmail address that sends |
+| `SMTP_PASS` | a Google **App Password** (not the account password) |
+| `MAIL_FROM` / `MAIL_FROM_NAME` | envelope sender and display name |
+| `NOTIFY_EMAIL` | studio inbox for internal alerts (falls back to `SMTP_USER`) |
+| `PUBLIC_SITE_URL` | absolute URL used inside emails, e.g. `https://salonlumina.vercel.app` |
+
+**None of the mail values belong in the repo.** Set them in Vercel → Project →
+Settings → Environment Variables (`.env` locally). Email degrades quietly: if the
+credentials are missing the site still books, it simply sends nothing.
 
 ---
 
@@ -168,14 +180,68 @@ Sessions are signed JWTs in an `HttpOnly`, `SameSite=Lax` cookie (12h).
 `POST /api/admin/clients/:id/formulas` · `DELETE /api/admin/formulas/:id` ·
 `GET|POST /api/admin/services` · `PATCH|DELETE /api/admin/services/:id` ·
 `GET|PUT /api/admin/availability` · `GET|PUT /api/admin/settings` ·
-`GET /api/admin/messages` · `PATCH /api/admin/messages/:id` · `GET|PATCH /api/admin/reviews`
+`GET /api/admin/messages` · `PATCH /api/admin/messages/:id` · `GET|PATCH /api/admin/reviews` ·
+`GET /api/admin/email/status` · `POST /api/admin/email/test` ·
+`GET|POST /api/admin/announcements` · `PATCH|DELETE /api/admin/announcements/:id` ·
+`POST /api/admin/announcements/:id/send` · `POST|DELETE /api/admin/services/:id/photo`
 
 **Appointment statuses:** `pending → confirmed → in_chair → completed` plus `cancelled`, `no_show`.
 Completing a visit rolls the client's `visit_count`, `total_spent_cents` and `last_visit_date`.
 
 ---
 
-## 6. Booking rules
+## 6. Email
+
+Nodemailer over SMTP, configured entirely from environment variables
+(`server/lib/mailer.js`). Templates live in `server/lib/emails.js` — table layout,
+inline styles, a text fallback — and `server/lib/mailContext.js` turns database rows
+into the flat values the templates print.
+
+| Email | Fires when | To |
+| --- | --- | --- |
+| Booking request / confirmation | client books online | client |
+| Booking alert | client books online | `NOTIFY_EMAIL` |
+| Appointment confirmed | status → `confirmed` | client |
+| Appointment moved | date or time changed | client |
+| Appointment cancelled | status → `cancelled` | client |
+| Website enquiry | contact form | `NOTIFY_EMAIL` |
+| Announcement | admin presses *Email to clients* | every client with an email |
+
+Sending never blocks a booking: every call is awaited inside `try/catch` and returns
+`{ ok, error }`. **Admin → Email** shows the live connection and has a *Send test* button.
+
+Pass `"silent": true` in a status/reschedule PATCH body to skip the client email.
+
+---
+
+## 7. Announcements
+
+**Admin → Announcements** manages the bar above the site header on every page.
+
+- `title` (also the broadcast subject), `message`, `link_label`, `link_url`
+- `variant` — `info` (forest), `gold`, `plum`, `urgent`
+- `starts_at` / `ends_at` — optional window; the bar appears and disappears by itself
+- `is_active` — pause without deleting
+- *Email to clients* — renders the `announcement` template to every client with an address
+
+`GET /api/studio` picks the newest active announcement whose window contains *now* and
+returns `announcement`, `announcement_link_label`, `announcement_link_url`,
+`announcement_variant`. The plain `settings.announcement` line is the fallback shown
+when nothing is scheduled. The table is `announcements` (see `server/db/schema.sql`).
+
+---
+
+## 8. Service photos
+
+**Admin → Services → Edit → Upload photo** sends the file to Supabase Storage
+(bucket `service-photos`, created on first use) and stores the public URL in
+`services.image_url`. Vercel's filesystem is read-only, so uploads must go to object
+storage — never to `public/`. *Use tile instead* clears the photo and restores the
+typographic tile. JPG, PNG, WebP or AVIF, up to 4 MB.
+
+---
+
+## 9. Booking rules
 
 Set these in **Admin → Settings** (stored in `settings`, no deploy needed):
 
@@ -192,7 +258,7 @@ appointments table and returns `409 SLOT_TAKEN`, and the UI refreshes availabili
 
 ---
 
-## 7. Deploy to Vercel
+## 10. Deploy to Vercel
 
 1. Push this repo to GitHub.
 2. Vercel → **Add New… → Project → Import** the repo.
@@ -207,7 +273,7 @@ and sets clean URLs so `/booking` works as well as `/booking.html`.
 
 ---
 
-## 8. Design system — Hearth
+## 11. Design system — Hearth
 
 | Token | Value |
 | --- | --- |
@@ -232,7 +298,7 @@ support, and AA contrast on all text pairs.
 
 ---
 
-## 9. Notes / next steps
+## 12. Notes / next steps
 
 - Email is not sent by the API yet — wire Resend/Postmark into `POST /api/bookings`
   and `POST /api/contact` (`server/routes/public.js`) when you have a domain.

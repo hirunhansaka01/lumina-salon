@@ -293,6 +293,30 @@
     });
 
     reveal();
+    initAnnouncement();
+  }
+
+  /* ── Announcement bar (any page; beats the settings fallback) ─ */
+  function initAnnouncement() {
+    const bar = qs('[data-announcement]');
+    if (!bar) return;
+    api.get('/api/studio').then(({ studio }) => {
+      if (!studio || !studio.announcement) return;
+      const text = qs('[data-announcement-text]', bar);
+      if (text) text.textContent = studio.announcement;
+      const link = qs('[data-announcement-link]', bar);
+      if (link) {
+        if (studio.announcement_link_url) {
+          link.href = studio.announcement_link_url;
+          link.textContent = studio.announcement_link_label || 'Find out more';
+          link.hidden = false;
+        } else {
+          link.hidden = true;
+        }
+      }
+      if (studio.announcement_variant) bar.dataset.variant = studio.announcement_variant;
+      bar.hidden = false;
+    }).catch(() => {});
   }
 
   /* ── Newsletter form (any page) ─────────────────────────────── */

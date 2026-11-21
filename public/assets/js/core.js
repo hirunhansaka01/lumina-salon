@@ -298,6 +298,23 @@
   }
 
   /* Pages without an announcement bar still need the studio's real details. */
+  function setCancelNote(text, selector = '[data-studio-cancel-note]') {
+    if (!text) return;
+    document.querySelectorAll(selector).forEach((node) => { node.textContent = text; });
+  }
+
+  function setCancelNoteSentence(text) {
+    setCancelNote(text, '[data-studio-cancel-note].is-sentence');
+  }
+
+  /* The cancellation window is a setting, so the promise copy follows it. */
+  function setCancelCopy(studio) {
+    const h = studio && studio.cancellation_hours;
+    if (!h) return;
+    setCancelNote(`free changes up to ${h} hours before`);
+    setCancelNoteSentence(`Free changes or cancellation up to ${h} hours before.`);
+  }
+
   function initStudioDetails() {
     if (qs('[data-announcement]')) return;   // initAnnouncement already did it
     api.get('/api/studio').then(({ studio }) => {
@@ -305,6 +322,7 @@
       setPhone(document, studio.phone);
       setAddress(document, studio.address);
       setEmail(document, studio.email);
+      setCancelCopy(studio);
     }).catch(() => {});
   }
 
@@ -354,6 +372,7 @@
       setPhone(document, studio.phone);
       setAddress(document, studio.address);
       setEmail(document, studio.email);
+      setCancelCopy(studio);
       if (!bar || !studio.announcement) return;
       /* already dismissed this exact message — stay quiet */
       if (announcementSeen(studio.announcement)) return;

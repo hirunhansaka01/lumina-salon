@@ -10,8 +10,8 @@
 <link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2?v=066710ce" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2?v=d5c53a50" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="/assets/css/style.css?v=01a2a4ec" />
-<script defer src="/assets/js/core.js?v=3626111e"></script>
-<script defer src="/assets/js/booking.js?v=5b325fa1"></script>
+<script defer src="/assets/js/core.js?v=c099bc51"></script>
+<script defer src="/assets/js/booking.js?v=36d71418"></script>
 </head>
 <body>
 <a href="#main" class="sr-only">Skip to content</a>
@@ -75,7 +75,7 @@
         <div class="reveal">
           <span class="eyebrow">Reservations</span>
           <h1 class="display-md">Schedule your visit</h1>
-          <p class="body-lg">Pick a service, choose your stylist and find a time that suits. No deposit, free changes up to 24 hours before.</p>
+          <p class="body-lg">Pick a service, choose your stylist and find a time that suits. No deposit, <span data-studio-cancel-note>free changes up to 24 hours before</span>.</p>
         </div>
         <div class="stepper reveal hide-sm" aria-label="Booking progress">
           <div class="stepper-item is-active" data-step-marker="1"><span class="stepper-dot">1</span><span class="stepper-label">Service</span></div>
@@ -244,7 +244,7 @@
 
           <div class="card card-inset">
             <div class="trust-row">
-              <div class="trust-item"><span data-icon="shield"></span><span>Free changes or cancellation up to 24 hours before.</span></div>
+              <div class="trust-item"><span data-icon="shield"></span><span data-studio-cancel-note class="is-sentence">Free changes or cancellation up to 24 hours before.</span></div>
               <div class="trust-item"><span data-icon="cup"></span><span>Complimentary tea, coffee and small treats.</span></div>
               <div class="trust-item"><span data-icon="pin"></span><span><span data-studio-address>742 Evergreen Terrace</span> — street parking nearby.</span></div>
             </div>

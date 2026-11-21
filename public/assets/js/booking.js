@@ -294,6 +294,7 @@
 
   function showConfirmation(res) {
     const a = res.appointment || {};
+    const st = state.studio || {};
     H.qs('#booking-main').querySelectorAll('[data-step]').forEach((n) => { n.hidden = true; });
     const wrap = H.qs('#confirmation');
     wrap.hidden = false;
@@ -386,5 +387,4 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => { loadStudio(); boot(); });
-})();      const st = state.studio || {};
-
+})();

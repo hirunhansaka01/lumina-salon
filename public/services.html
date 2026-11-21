@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-current-page="/services">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Service Menu — Lumina Salon</title>
+<meta name="description" content="Browse haircuts, colouring, treatments and styling packages with transparent pricing and honest timing at Lumina Salon, Springfield." />
+<meta name="theme-color" content="#faf4eb" />
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/assets/css/style.css" />
+<script defer src="/assets/js/core.js"></script>
+<script defer src="/assets/js/services.js"></script>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+
+<header class="site-header">
+  <div class="container">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/" aria-label="Lumina Salon — home">
+        <span class="brand-mark" aria-hidden="true">L</span>
+        <span class="brand-text">Lumina<small>Hair Studio</small></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="services.html">Services</a>
+        <a class="nav-link" href="booking.html">Booking</a>
+        <a class="nav-link" href="contact.html">Contact</a>
+      </div>
+      <div class="nav-actions">
+        <a class="nav-phone" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+        <a class="btn btn-sm" href="booking.html">Book Now</a>
+        <button class="btn btn-icon nav-toggle" data-drawer-open aria-label="Open menu" aria-expanded="false" aria-controls="site-drawer"><span data-icon="menu"></span></button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="drawer" id="site-drawer" aria-hidden="true" aria-label="Mobile menu">
+  <div class="drawer-head">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">L</span><span class="brand-text">Lumina<small>Hair Studio</small></span></a>
+    <button class="btn btn-icon" data-drawer-close aria-label="Close menu"><span data-icon="close"></span></button>
+  </div>
+  <nav class="drawer-links" aria-label="Mobile">
+    <a class="drawer-link" href="index.html">Home <span data-icon="arrowUpRight"></span></a>
+    <a class="drawer-link" href="services.html">Services <span data-icon="arrowUpRight"></span></a>
+    <a class="drawer-link" href="booking.html">Booking <span data-icon="arrowUpRight"></span></a>
+    <a class="drawer-link" href="contact.html">Contact <span data-icon="arrowUpRight"></span></a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="btn btn-block" href="booking.html">Book an appointment</a>
+    <a class="btn btn-outline btn-block" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+  </div>
+</div>
+
+<main id="main">
+  <section class="page-hero">
+    <div class="container">
+      <div class="row-between" style="align-items:flex-end">
+        <div class="reveal">
+          <span class="eyebrow">Service menu</span>
+          <h1 class="display-md">Haircuts, colour and quiet rituals</h1>
+          <p class="body-lg">Browse every service with transparent pricing and honest timing. All appointments include a consultation and a finishing style.</p>
+        </div>
+        <div class="chip chip-primary reveal hide-sm">12 services · 2 stylists</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-flush-top" style="padding-bottom:var(--section)">
+    <div class="container">
+      <!-- toolbar -->
+      <div class="toolbar reveal">
+        <div class="input-group">
+          <span data-icon="search"></span>
+          <label class="sr-only" for="service-search">Search services</label>
+          <input class="input" id="service-search" type="search" placeholder="Search services, treatments or stylists…" autocomplete="off" />
+        </div>
+        <div class="row gap-sm" style="margin-left:auto">
+          <label class="sr-only" for="service-sort">Sort by</label>
+          <select class="select" id="service-sort" style="min-height:44px;width:auto;min-width:170px">
+            <option value="featured">Featured first</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="duration">Shortest appointment</option>
+            <option value="name">Alphabetical</option>
+          </select>
+          <div class="view-toggle" role="tablist" aria-label="Layout">
+            <button role="tab" aria-selected="true" data-view="grid" aria-label="Grid view"><span data-icon="grid"></span></button>
+            <button role="tab" aria-selected="false" data-view="list" aria-label="List view"><span data-icon="list"></span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- category chips -->
+      <div class="filter-bar mt-md reveal" id="category-bar" role="group" aria-label="Filter by category"></div>
+
+      <!-- results -->
+      <div class="results-head mt-lg">
+        <p class="results-count" id="results-count" aria-live="polite">Loading the menu…</p>
+        <div class="row gap-sm">
+          <span class="chip chip-outline chip-sm">No deposit required</span>
+          <span class="chip chip-outline chip-sm">Free consultation</span>
+        </div>
+      </div>
+
+      <div class="grid grid-3" id="service-grid" aria-live="polite"></div>
+      <div id="service-empty" hidden class="empty mt-lg">
+        <span data-icon="search"></span>
+        <h3 class="headline-sm">Nothing matches that just yet</h3>
+        <p class="body-md" style="max-width:36ch">Try a different word, or clear the filters to see the full menu.</p>
+        <button class="btn btn-sm btn-outline" id="clear-filters">Clear filters</button>
+      </div>
+
+      <!-- note strip -->
+      <div class="card card-inset mt-xl reveal" style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+        <span class="feature-icon" data-icon="info"></span>
+        <div style="flex:1;min-width:260px">
+          <h3 class="title-md">A note on timing &amp; pricing</h3>
+          <p class="body-md mt-sm">Prices reflect the starting rate for a stylist at Lumina. Longer or denser hair, colour corrections and restyles may add time and cost — we always agree this with you during your consultation, before any colour is mixed.</p>
+        </div>
+        <a class="btn btn-sm btn-ghost" href="contact.html">Ask a question <span data-icon="arrow"></span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-tight" style="padding-bottom:var(--section)">
+    <div class="container">
+      <div class="cta-band reveal">
+        <div>
+          <span class="eyebrow" style="color:var(--secondary)">Not sure what to book?</span>
+          <h2 class="mt-md">Start with a free 15-minute consultation</h2>
+          <p>Send us a photo and a little about your hair — we will recommend the right service, stylist and honest time estimate.</p>
+        </div>
+        <div class="cta-actions">
+          <a class="btn btn-inverse btn-lg" href="contact.html">Talk to the studio <span data-icon="arrow"></span></a>
+          <a class="btn btn-lg" href="booking.html" style="background:rgba(255,252,246,.1);color:var(--on-inverse);border-color:rgba(255,252,246,.24);box-shadow:none">Book online</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">L</span><span class="brand-text">Lumina<small>Hair Studio</small></span></a>
+        <p class="footer-blurb">Warm editorial hair care and bespoke colour in Springfield. A quiet room, good light, and two stylists who care about the details.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Visit</h4>
+        <ul class="footer-list">
+          <li>742 Evergreen Terrace<br />Springfield</li>
+          <li>Tuesday – Saturday<br />9am – 7pm</li>
+          <li><a href="/contact">Parking &amp; directions</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Services</h4>
+        <ul class="footer-list">
+          <li><a href="services.html?category=Coloring">Balayage &amp; colour</a></li>
+          <li><a href="services.html?category=Haircuts">Haircuts</a></li>
+          <li><a href="services.html?category=Treatments">Treatments</a></li>
+          <li><a href="services.html?category=Styling">Styling</a></li>
+          <li><a href="services.html?category=Packages">Packages</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Studio letters</h4>
+        <p class="footer-note">Seasonal notes on colour trends, care rituals and first pick of new appointment slots.</p>
+        <form class="footer-subscribe" data-subscribe novalidate>
+          <label class="sr-only" for="footer-email">Email address</label>
+          <input class="input" id="footer-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+          <button class="btn btn-secondary" type="submit" aria-label="Subscribe"><span data-icon="arrow"></span></button>
+        </form>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year>2026</span> Lumina Salon. All rights reserved.</span>
+      <span class="row gap-md row-wrap"><a href="/contact">Contact</a><a href="/booking">Book</a><a href="/admin">Studio admin</a></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

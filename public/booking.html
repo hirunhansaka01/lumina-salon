@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" data-current-page="/booking">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Book an Appointment — Lumina Salon</title>
+<meta name="description" content="Choose a service, stylist, date and time. Book your Lumina Salon appointment online in under a minute — no deposit required." />
+<meta name="theme-color" content="#faf4eb" />
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/assets/css/style.css" />
+<script defer src="/assets/js/core.js"></script>
+<script defer src="/assets/js/booking.js"></script>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+
+<header class="site-header">
+  <div class="container">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/" aria-label="Lumina Salon — home">
+        <span class="brand-mark" aria-hidden="true">L</span>
+        <span class="brand-text">Lumina<small>Hair Studio</small></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="services.html">Services</a>
+        <a class="nav-link" href="booking.html">Booking</a>
+        <a class="nav-link" href="contact.html">Contact</a>
+      </div>
+      <div class="nav-actions">
+        <a class="nav-phone" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+        <a class="btn btn-sm" href="booking.html">Book Now</a>
+        <button class="btn btn-icon nav-toggle" data-drawer-open aria-label="Open menu" aria-expanded="false" aria-controls="site-drawer"><span data-icon="menu"></span></button>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<div class="drawer" id="site-drawer" aria-hidden="true" aria-label="Mobile menu">
+  <div class="drawer-head">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">L</span><span class="brand-text">Lumina<small>Hair Studio</small></span></a>
+    <button class="btn btn-icon" data-drawer-close aria-label="Close menu"><span data-icon="close"></span></button>
+  </div>
+  <nav class="drawer-links" aria-label="Mobile">
+    <a class="drawer-link" href="index.html">Home <span data-icon="arrowUpRight"></span></a>
+    <a class="drawer-link" href="services.html">Services <span data-icon="arrowUpRight"></span></a>
+    <a class="drawer-link" href="booking.html">Booking <span data-icon="arrowUpRight"></span></a>
+    <a class="drawer-link" href="contact.html">Contact <span data-icon="arrowUpRight"></span></a>
+  </nav>
+  <div class="drawer-foot">
+    <a class="btn btn-block" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+    <p class="body-sm center" style="margin-top:8px">742 Evergreen Terrace, Springfield<br />Tue–Sat, 9am–7pm</p>
+  </div>
+</div>
+
+<main id="main">
+  <!-- ── Intro ─────────────────────────────────────────────────── -->
+  <section class="page-hero">
+    <div class="container">
+      <div class="row-between" style="align-items:flex-end;gap:24px">
+        <div class="reveal">
+          <span class="eyebrow">Reservations</span>
+          <h1 class="display-md">Schedule your visit</h1>
+          <p class="body-lg">Pick a service, choose your stylist and find a time that suits. No deposit, free changes up to 24 hours before.</p>
+        </div>
+        <div class="stepper reveal hide-sm" aria-label="Booking progress">
+          <div class="stepper-item is-active" data-step-marker="1"><span class="stepper-dot">1</span><span class="stepper-label">Service</span></div>
+          <span class="stepper-line"></span>
+          <div class="stepper-item" data-step-marker="2"><span class="stepper-dot">2</span><span class="stepper-label">Stylist</span></div>
+          <span class="stepper-line"></span>
+          <div class="stepper-item" data-step-marker="3"><span class="stepper-dot">3</span><span class="stepper-label">Time</span></div>
+          <span class="stepper-line"></span>
+          <div class="stepper-item" data-step-marker="4"><span class="stepper-dot">4</span><span class="stepper-label">Details</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Booking shell ─────────────────────────────────────────── -->
+  <section class="section-flush-top" style="padding-bottom:var(--section)">
+    <div class="container">
+      <div class="booking-shell">
+        <div class="booking-main" id="booking-main">
+
+          <!-- 1 · service -->
+          <section class="card step-card reveal" data-step="service" data-complete="false">
+            <div class="step-head">
+              <span class="step-num">1</span>
+              <div>
+                <h2 class="step-title">Choose a service</h2>
+                <p class="step-sub" id="service-step-sub">Pick what you are here for</p>
+              </div>
+              <button class="btn-link" data-edit-step="service" hidden style="margin-left:auto">Change</button>
+            </div>
+            <div class="step-body">
+              <div class="pick-list" id="service-picks" aria-live="polite">
+                <div class="skeleton" style="height:62px"></div>
+                <div class="skeleton" style="height:62px"></div>
+                <div class="skeleton" style="height:62px"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2 · stylist -->
+          <section class="card step-card is-locked reveal" data-step="stylist" data-complete="false">
+            <div class="step-head">
+              <span class="step-num">2</span>
+              <div>
+                <h2 class="step-title">Choose your stylist</h2>
+                <p class="step-sub">Both chairs, same warm welcome</p>
+              </div>
+            </div>
+            <div class="step-body">
+              <div class="stylist-pick-row" id="stylist-picks"></div>
+            </div>
+          </section>
+
+          <!-- 3 · date & time -->
+          <section class="card step-card is-locked reveal" data-step="time" data-complete="false">
+            <div class="step-head">
+              <span class="step-num">3</span>
+              <div>
+                <h2 class="step-title">Pick a date &amp; time</h2>
+                <p class="step-sub" id="time-step-sub">Availability updates live</p>
+              </div>
+            </div>
+            <div class="step-body">
+              <div class="stack gap-md">
+                <div class="row-between">
+                  <span class="label-md muted" id="date-rail-label">Next 14 days</span>
+                  <button class="btn-link" id="more-dates" hidden>Later dates <span data-icon="arrow"></span></button>
+                </div>
+                <div class="date-rail" id="date-rail" role="group" aria-label="Choose a date"></div>
+              </div>
+              <div id="slot-area">
+                <p class="slot-note">Choose a stylist to see live availability.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- 4 · details -->
+          <section class="card step-card is-locked reveal" data-step="details" data-complete="false">
+            <div class="step-head">
+              <span class="step-num">4</span>
+              <div>
+                <h2 class="step-title">Your details</h2>
+                <p class="step-sub">We only use these to look after your booking</p>
+              </div>
+            </div>
+            <div class="step-body">
+              <form id="booking-form" class="stack gap-md" novalidate>
+                <div class="form-grid">
+                  <div class="field">
+                    <label class="field-label" for="bk-name">Full name <span class="req">*</span></label>
+                    <input class="input" id="bk-name" name="name" autocomplete="name" placeholder="Sarah Jenkins" required />
+                    <span class="field-error" data-error-for="name"></span>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="bk-email">Email <span class="req">*</span></label>
+                    <input class="input" id="bk-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                    <span class="field-error" data-error-for="email"></span>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="bk-phone">Phone</label>
+                    <input class="input" id="bk-phone" name="phone" type="tel" autocomplete="tel" placeholder="(555) 000-0000" />
+                    <span class="field-hint">For a courtesy reminder the day before.</span>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="bk-notes">Anything we should know?</label>
+                    <input class="input" id="bk-notes" name="notes" placeholder="First visit, colour history, allergies…" />
+                  </div>
+                  <div class="field span-2">
+                    <label class="check-row">
+                      <input type="checkbox" id="bk-consent" checked />
+                      <span>Send me a confirmation email and the occasional studio letter. No spam, unsubscribe any time.</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="row-between" style="flex-wrap:wrap;gap:12px">
+                  <p class="body-sm dim" style="max-width:38ch">
+                    By confirming you agree to our 24-hour cancellation courtesy.
+                  </p>
+                  <button class="btn btn-lg" type="submit" id="confirm-btn">
+                    Confirm appointment <span data-icon="arrow"></span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <!-- confirmation -->
+          <section id="confirmation" hidden class="confirm-wrap">
+            <div class="confirm-mark"><span data-icon="check"></span></div>
+            <h2 class="headline-lg mt-lg" id="confirm-title">Your appointment is in</h2>
+            <p class="body-lg mt-sm" id="confirm-message">We have your request and will confirm by email shortly.</p>
+            <div class="card confirm-card" id="confirm-card"></div>
+            <div class="row gap-md mt-lg" style="justify-content:center;flex-wrap:wrap">
+              <a class="btn btn-outline" href="/services">Browse the menu</a>
+              <a class="btn btn-ghost" href="/">Back to home</a>
+            </div>
+          </section>
+        </div>
+
+        <!-- summary rail -->
+        <aside class="booking-aside" aria-label="Booking summary">
+          <div class="card summary-card">
+            <h2 class="summary-title">Your appointment</h2>
+            <div class="summary-row">
+              <span class="k"><span data-icon="scissors"></span>Service</span>
+              <span class="v" id="sum-service">Not chosen</span>
+            </div>
+            <div class="summary-row">
+              <span class="k"><span data-icon="user"></span>Stylist</span>
+              <span class="v" id="sum-stylist">Any preference</span>
+            </div>
+            <div class="summary-row">
+              <span class="k"><span data-icon="calendar"></span>Date</span>
+              <span class="v" id="sum-date">Choose a day</span>
+            </div>
+            <div class="summary-row">
+              <span class="k"><span data-icon="clock"></span>Time</span>
+              <span class="v" id="sum-time">Choose a slot</span>
+            </div>
+            <div class="summary-total">
+              <span class="label">Total <span class="dim" id="sum-duration"></span></span>
+              <span class="value" id="sum-total">$0</span>
+            </div>
+            <p class="body-sm dim mt-sm" id="sum-note">No deposit required. Pay in the studio.</p>
+          </div>
+
+          <div class="card card-inset">
+            <div class="trust-row">
+              <div class="trust-item"><span data-icon="shield"></span><span>Free changes or cancellation up to 24 hours before.</span></div>
+              <div class="trust-item"><span data-icon="cup"></span><span>Complimentary tea, coffee and small treats.</span></div>
+              <div class="trust-item"><span data-icon="pin"></span><span>742 Evergreen Terrace — street parking nearby.</span></div>
+            </div>
+            <hr class="rule-soft mt-md" style="margin-bottom:16px" />
+            <div class="row-between">
+              <span class="body-sm dim">Prefer to talk?</span>
+              <a class="btn-link" href="tel:+15550198234"><span data-icon="phone"></span>(555) 019-8234</a>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="mobile-sum-bar" id="mobile-sum" aria-hidden="true">
+  <span class="mobile-sum-icon" aria-hidden="true" data-icon="scissors"></span>
+  <span class="mobile-sum-copy">
+    <span class="mobile-sum-bar-title" id="m-sum-title">Your appointment</span>
+    <span class="mobile-sum-bar-sub" id="m-sum-sub">Pick a service to begin</span>
+  </span>
+  <span class="mobile-sum-bar-total" id="m-sum-total"></span>
+  <button class="btn btn-sm" id="m-sum-next">Continue</button>
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">L</span><span class="brand-text">Lumina<small>Hair Studio</small></span></a>
+        <p class="footer-blurb">Warm editorial hair care and bespoke colour in Springfield. A quiet room, good light, and two stylists who care about the details.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Visit</h4>
+        <ul class="footer-list">
+          <li>742 Evergreen Terrace<br />Springfield</li>
+          <li>Tuesday – Saturday<br />9am – 7pm</li>
+          <li><a href="/contact">Parking &amp; directions</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Services</h4>
+        <ul class="footer-list">
+          <li><a href="services.html?category=Coloring">Balayage &amp; colour</a></li>
+          <li><a href="services.html?category=Haircuts">Haircuts</a></li>
+          <li><a href="services.html?category=Treatments">Treatments</a></li>
+          <li><a href="services.html?category=Styling">Styling</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Studio letters</h4>
+        <p class="footer-note">Seasonal notes on colour trends, care rituals and first pick of new appointment slots.</p>
+        <form class="footer-subscribe" data-subscribe novalidate>
+          <label class="sr-only" for="footer-email">Email address</label>
+          <input class="input" id="footer-email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+          <button class="btn btn-secondary" type="submit" aria-label="Subscribe"><span data-icon="arrow"></span></button>
+        </form>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span data-year>2026</span> Lumina Salon. All rights reserved.</span>
+      <span class="row gap-md row-wrap"><a href="/contact">Contact</a><a href="/booking">Book</a><a href="/admin">Studio admin</a></span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

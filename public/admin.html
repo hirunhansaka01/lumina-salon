@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Studio Admin — Lumina Salon</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#004340" />
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/assets/css/style.css" />
+<script defer src="/assets/js/core.js"></script>
+<script defer src="/assets/js/admin.js"></script>
+</head>
+<body class="admin-body">
+
+<!-- ══════════════════════════════════════════════════════════════
+     Sign in
+     ══════════════════════════════════════════════════════════════ -->
+<div id="auth-screen" class="auth-shell" hidden>
+  <aside class="auth-aside">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">L</span>
+      <span class="brand-text">Lumina<small>Hair Studio</small></span>
+    </a>
+    <div>
+      <h2>The quiet side of the studio</h2>
+      <p>Appointments, colour formulas, working hours and pricing — everything your team needs, in one calm room.</p>
+    </div>
+    <p class="body-sm" style="color:rgba(255,252,246,.5);position:relative">Springfield · Est. 2016</p>
+  </aside>
+
+  <div class="auth-form-wrap">
+    <form class="auth-form" id="login-form" novalidate>
+      <span class="eyebrow">Studio access</span>
+      <h1 class="mt-sm">Welcome back</h1>
+      <p class="body-md mt-sm">Sign in to manage today's schedule.</p>
+
+      <div class="stack gap-md mt-lg">
+        <div class="field">
+          <label class="field-label" for="login-email">Email</label>
+          <div class="input-group">
+            <span data-icon="mail"></span>
+            <input class="input" id="login-email" name="email" type="email" autocomplete="username" placeholder="you@luminasalon.com" required />
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="login-password">Password</label>
+          <div class="input-group">
+            <span data-icon="lock"></span>
+            <input class="input" id="login-password" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+            <button class="input-action" type="button" id="toggle-password" aria-label="Show password" style="position:absolute;right:6px;height:36px;padding:0 12px;border-radius:8px;font-size:.8125rem;font-weight:600;color:var(--primary)">Show</button>
+          </div>
+        </div>
+        <span class="field-error" id="login-error" role="alert"></span>
+        <button class="btn btn-lg btn-block" type="submit" id="login-btn">Sign in <span data-icon="arrow"></span></button>
+        <a class="btn btn-ghost btn-block" href="/">Back to the website</a>
+      </div>
+
+      <div class="auth-hint">
+        <strong>Demo access</strong> — elena@luminasalon.com / LuminaStudio2026!<br />
+        Change the password in Settings once you are in.
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Studio app
+     ══════════════════════════════════════════════════════════════ -->
+<div id="admin-app" class="admin-layout" hidden>
+  <aside class="admin-side">
+    <a class="brand" href="/" title="Lumina Salon">
+      <span class="brand-mark" aria-hidden="true">L</span>
+      <span class="brand-text">Lumina<small>Studio Admin</small></span>
+    </a>
+
+    <nav class="admin-nav" aria-label="Studio">
+      <span class="admin-nav-group">Today</span>
+      <button class="admin-link" data-view="overview"><span data-icon="layout"></span><span>Overview</span></button>
+      <button class="admin-link" data-view="appointments"><span data-icon="calendar"></span><span>Appointments</span><span class="count-pill" id="nav-pending" hidden>0</span></button>
+      <span class="admin-nav-group">Studio</span>
+      <button class="admin-link" data-view="services"><span data-icon="scissors"></span><span>Services &amp; Pricing</span></button>
+      <button class="admin-link" data-view="clients"><span data-icon="users"></span><span>Clients &amp; Formulas</span></button>
+      <button class="admin-link" data-view="messages"><span data-icon="mail"></span><span>Inbox</span><span class="count-pill" id="nav-messages" hidden>0</span></button>
+      <span class="admin-nav-group">Setup</span>
+      <button class="admin-link" data-view="hours"><span data-icon="clock"></span><span>Working Hours</span></button>
+      <button class="admin-link" data-view="settings"><span data-icon="settings"></span><span>Settings</span></button>
+      <a class="admin-link" href="/" target="_blank" rel="noopener"><span data-icon="external"></span><span>View public site</span></a>
+    </nav>
+
+    <div class="admin-side-foot">
+      <div class="admin-user">
+        <span class="avatar" id="user-avatar" aria-hidden="true">EV</span>
+        <span class="admin-user-text flex-1">
+          <span class="admin-user-name" id="user-name">Elena Vance</span>
+          <span class="admin-user-role" id="user-role">Studio lead</span>
+        </span>
+        <button class="admin-link" id="logout-btn" title="Sign out" aria-label="Sign out" style="padding:6px;width:auto"><span data-icon="logout"></span></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div>
+        <h1 id="page-title">Overview</h1>
+        <p class="sub" id="page-sub">Saturday, November 21 · 742 Evergreen Terrace</p>
+      </div>
+      <div class="row gap-sm">
+        <button class="btn btn-outline btn-sm" id="refresh-btn" title="Refresh data"><span data-icon="chartUp"></span><span class="hide-sm">Refresh</span></button>
+        <button class="btn btn-sm" id="new-booking-btn"><span data-icon="plus"></span>New booking</button>
+      </div>
+    </header>
+
+    <div class="admin-content" id="admin-content"></div>
+  </div>
+</div>
+
+<div id="overlay-root"></div>
+
+<script>
+  /* quick icon hydration for the static admin chrome */
+  (function () {
+    const paths = {
+      mail: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.6 7.5 8.4 5.6 8.4-5.6"/>',
+      lock: '<rect x="4.5" y="10" width="15" height="10" rx="2.5"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"/>',
+      arrow: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+      layout: '<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9.5h17M9 9.5V20"/>',
+      calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
+      scissors: '<circle cx="6.5" cy="6.5" r="2.6"/><circle cx="6.5" cy="17.5" r="2.6"/><path d="M8.6 8.4 19 18M19 6 8.6 15.6"/>',
+      users: '<circle cx="9.5" cy="8.5" r="3.3"/><path d="M3.5 20c.6-3.3 3.1-5.2 6-5.2s5.4 1.9 6 5.2"/><path d="M16.4 5.6a3.2 3.2 0 0 1 0 6.2"/><path d="M17.8 14.9c2 .5 3.4 2.2 3.8 4.6"/>',
+      clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/>',
+      settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-3 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2 2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 19.4 11a2 2 0 1 1 0 4Z"/>',
+      external: '<path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>',
+      logout: '<path d="M15 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/><path d="M10 12h11"/><path d="m18 9 3 3-3 3"/>',
+      chartUp: '<path d="m4 16 5-5 3.5 3.5L20 7"/><path d="M15 7h5v5"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>'
+    };
+    document.querySelectorAll('[data-icon]').forEach((n) => {
+      const p = paths[n.dataset.icon];
+      if (p) n.innerHTML = `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+    });
+  })();
+</script>
+</body>
+</html>

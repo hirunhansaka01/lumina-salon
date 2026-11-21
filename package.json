@@ -1,0 +1,23 @@
+{
+  "name": "lumina-salon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hearth — Lumina Salon. Node.js + Express booking platform with Supabase (Postgres) and a full studio admin.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "db:setup": "node scripts/setup-db.js",
+    "db:seed": "node scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

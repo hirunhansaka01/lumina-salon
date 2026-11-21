@@ -104,6 +104,9 @@
     settings: ['Settings', 'Booking rules, studio details and security'],
   };
 
+  /* every view this build can actually paint */
+  const VIEW_RENDERERS = ['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'email', 'hours', 'settings'];
+
   async function navigate(view, opts = {}) {
     state.view = view;
     location.hash = `#${view}`;
@@ -116,6 +119,7 @@
 
     main().innerHTML = skeletonView();
     try {
+      let handled = true;
       if (view === 'overview') await renderOverview();
       if (view === 'appointments') await renderAppointments();
       if (view === 'services') await renderServices();
@@ -125,11 +129,18 @@
       if (view === 'email') await renderEmail();
       if (view === 'hours') await renderHours();
       if (view === 'settings') await renderSettings();
+      if (!VIEW_RENDERERS.includes(view)) handled = false;
+      if (!handled) throw new Error(`No renderer for "${view}" — this page was updated in a newer build.`);
       H.hydrate(main());
       H.reveal(main());
     } catch (err) {
       if (err.status === 401) { location.reload(); return; }
-      main().innerHTML = `<div class="empty">${H.icon('alert')}<p class="body-md">${H.esc(err.message)}</p><button class="btn btn-sm btn-outline" onclick="location.reload()">Retry</button></div>`;
+      const stale = /No renderer for/.test(err.message);
+      main().innerHTML = `<div class="empty">${H.icon('alert')}
+        <h3 class="headline-sm">${stale ? 'A newer version of the studio is available' : 'Something went wrong'}</h3>
+        <p class="body-md">${stale ? 'Your browser is holding an older copy of the admin script. Reloading fetches the current one.' : H.esc(err.message)}</p>
+        <button class="btn btn-sm" onclick="location.reload(true)">Reload the studio</button>
+      </div>`;
     }
   }
 

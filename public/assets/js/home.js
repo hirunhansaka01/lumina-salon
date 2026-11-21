@@ -59,6 +59,15 @@
     try {
       const { reviews } = await H.api.get('/api/reviews');
       const list = reviews.slice(0, 3);
+      if (!list.length) {
+        // No published reviews yet — drop the whole section rather than
+        // showing an empty shell or invented testimonials.
+        const section = mount.closest('section');
+        if (section) section.hidden = true;
+        return;
+      }
+      const section = mount.closest('section');
+      if (section) section.hidden = false;
       mount.innerHTML = list.map((r, i) => `
         <article class="card feature-card review-card reveal" style="--reveal-delay:${i * 70}ms">
           ${H.stars(r.rating)}

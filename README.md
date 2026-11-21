@@ -109,7 +109,9 @@ mark + category), so the grid keeps an even rhythm. To attach a photo, drop the
 file in `public/assets/services/` and set the path in **Admin → Services & pricing
 → Edit → Service photo** (or `services.image_url` in Postgres).
 
-**Demo sign-in:** `elena@luminasalon.com` / `LuminaStudio2026!`
+**Sign-in:** the studio admin lives at `/admin`. There are no demo credentials in this
+repository — the account is created once, from `SETUP_ADMIN_EMAIL` /
+`SETUP_ADMIN_PASSWORD`, and the password is changed in **Admin → Settings**.
 
 ---
 

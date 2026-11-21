@@ -23,18 +23,26 @@ async function main() {
   console.log('→ Supabase:', db.url);
 
   /* ── admin user ── */
-  const email = (process.env.SETUP_ADMIN_EMAIL || 'elena@luminasalon.com').toLowerCase();
-  const existing = await db.from('admin_users').select('id').eq('email', email).maybeSingle();
-  if (existing.data) {
+  const email = (process.env.SETUP_ADMIN_EMAIL || '').toLowerCase();
+  const password = process.env.SETUP_ADMIN_PASSWORD || '';
+  if (!email || !password) {
+    console.log('! skipping admin seed — set SETUP_ADMIN_EMAIL and SETUP_ADMIN_PASSWORD');
+  }
+  const existing = email
+    ? await db.from('admin_users').select('id').eq('email', email).maybeSingle()
+    : { data: null };
+  if (!email || !password) {
+    /* nothing to do — already reported above */
+  } else if (existing.data) {
     console.log('· admin already exists:', email);
   } else {
     await db.from('admin_users').insert({
-      name: process.env.SETUP_ADMIN_NAME || 'Elena Vance',
+      name: process.env.SETUP_ADMIN_NAME || 'Studio Owner',
       email,
-      password_hash: await bcrypt.hash(process.env.SETUP_ADMIN_PASSWORD || 'LuminaStudio2026!', 10),
+      password_hash: await bcrypt.hash(password, 12),
       role: 'owner',
       title: 'Studio Lead',
-      avatar_initials: 'EV',
+      avatar_initials: 'SO',
     });
     console.log('✓ admin created:', email);
   }

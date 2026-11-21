@@ -807,7 +807,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 
 /* Footer */
 .site-footer {
-  margin-top: var(--section);
+  margin-top: clamp(32px, 5vw, 64px);
   background: var(--inverse);
   color: var(--on-inverse);
   position: relative;

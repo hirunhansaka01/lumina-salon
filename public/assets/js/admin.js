@@ -439,7 +439,8 @@
 
       <div class="grid grid-3">
         ${active.map((s) => `
-          <article class="card service-card">
+          <article class="card service-card${s.image_url ? ' has-photo' : ''}">
+            ${s.image_url ? `<div class="service-photo"><img src="${H.esc(s.image_url)}" alt="" loading="lazy" /></div>` : ''}
             <div class="service-card-top">
               <h3>${H.esc(s.name)}</h3>
               ${s.is_featured ? `<span class="chip chip-sm chip-gold">Featured</span>` : (s.badge ? `<span class="chip chip-sm chip-primary">${H.esc(s.badge)}</span>` : '')}
@@ -524,6 +525,14 @@
               <label class="field-label" for="s-description">Description</label>
               <textarea class="textarea" id="s-description" name="description" rows="3" style="min-height:88px">${H.esc(s.description || '')}</textarea>
             </div>
+            <div class="field">
+              <label class="field-label" for="s-image">Service photo</label>
+              <div class="row gap-sm" style="align-items:center">
+                <span class="pick-thumb" id="s-image-prev">${s.image_url ? `<img src="${H.esc(s.image_url)}" alt="" />` : ''}</span>
+                <input class="input" id="s-image" name="image_url" value="${H.esc(s.image_url || '')}" placeholder="/assets/services/your-photo.jpg" />
+              </div>
+              <p class="body-sm dim" style="margin-top:6px">Drop a new file into <code>public/assets/services/</code> and paste its path here. Leave blank for the typographic tile.</p>
+            </div>
             <label class="check-row"><input type="checkbox" name="is_featured" ${s.is_featured ? 'checked' : ''} /> <span>Feature on the home page</span></label>
             <div class="row-between mt-sm">
               <button class="btn btn-ghost" type="button" data-close>Cancel</button>
@@ -543,6 +552,7 @@
         duration_minutes: Number(f.get('duration_minutes')),
         price_cents: Math.round(Number(f.get('price')) * 100),
         badge: f.get('badge'),
+        image_url: (f.get('image_url') || '').trim() || null,
         is_featured: f.get('is_featured') === 'on',
         is_active: true,
       };

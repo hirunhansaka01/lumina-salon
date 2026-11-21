@@ -54,6 +54,7 @@ create table if not exists services (
   duration_minutes  int         not null default 45,
   price_cents       int         not null default 0,
   badge             text,
+  image_url         text,
   is_featured       boolean     not null default false,
   is_active         boolean     not null default true,
   sort_order        int         not null default 100,

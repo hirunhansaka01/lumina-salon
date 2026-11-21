@@ -59,6 +59,29 @@ npm start                 # http://localhost:3000
 | `/booking` | Booking flow |
 | `/admin` | Studio back office |
 
+### Photography & brand assets
+
+The studio supplied its own image set; everything below lives in `public/assets/`
+and is referenced from Supabase (`services.image_url`) rather than hard-coded.
+
+| File | Used for |
+| --- | --- |
+| `logo.svg` / `favicon.svg` | The botanical mark — the single brand glyph, inlined into every page header |
+| `hero-salon.jpg` | Home hero: the studio floor, arched mirrors, travertine counter |
+| `signature-technique.jpg` | Home "signature technique" block |
+| `services/signature-balayage.jpg` | Signature Balayage |
+| `services/precision-haircut.jpg` | Precision Haircut |
+| `services/gloss-and-toning.jpg` | Gloss & Toning Treatment |
+| `services/master-color-retouch.jpg` | Master Color Retouch |
+| `services/deep-conditioning.jpg` | Deep Conditioning Luxury |
+| `services/bridal-updo.jpg` | Bridal Updo Styling **and** Bridal Trial & Day-Of Package |
+| `*-thumb.jpg` | 220 px crops for the booking step 1 picker |
+
+Services without a photograph automatically render the typographic tile (studio
+mark + category), so the grid keeps an even rhythm. To attach a photo, drop the
+file in `public/assets/services/` and set the path in **Admin → Services & pricing
+→ Edit → Service photo** (or `services.image_url` in Postgres).
+
 **Demo sign-in:** `elena@luminasalon.com` / `LuminaStudio2026!`
 
 ---

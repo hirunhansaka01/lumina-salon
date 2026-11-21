@@ -87,6 +87,7 @@
     mount.innerHTML = state.services.map((s) => `
       <button class="pick" type="button" data-service="${s.id}" aria-pressed="${state.service?.id === s.id}">
         <span class="pick-check" aria-hidden="true"></span>
+        ${s.image_thumb ? `<span class="pick-thumb"><img src="${H.esc(s.image_thumb)}" alt="" loading="lazy" decoding="async" width="220" height="164" /></span>` : ''}
         <span class="pick-main flex-1">
           <span class="pick-title">${H.esc(s.name)}</span>
           <span class="pick-sub">${H.duration(s.duration_minutes)} · ${H.esc(s.category)}${s.badge ? ` · ${H.esc(s.badge)}` : ''}</span>

@@ -377,6 +377,7 @@ router.post('/services', wrap(async (req, res) => {
     duration_minutes: Number(b.duration_minutes) || 45,
     price_cents: Math.round(Number(b.price_cents) || 0),
     badge: clean(b.badge, 30) || null,
+    image_url: clean(b.image_url, 300) || null,
     is_featured: !!b.is_featured,
     is_active: b.is_active === undefined ? true : !!b.is_active,
     sort_order: Number(b.sort_order) || 100,
@@ -394,6 +395,7 @@ router.patch('/services/:id', wrap(async (req, res) => {
   if ('duration_minutes' in b) patch.duration_minutes = Number(b.duration_minutes) || 45;
   if ('price_cents' in b) patch.price_cents = Math.round(Number(b.price_cents) || 0);
   if ('badge' in b) patch.badge = clean(b.badge, 30) || null;
+  if ('image_url' in b) patch.image_url = clean(b.image_url, 300) || null;
   if ('is_featured' in b) patch.is_featured = !!b.is_featured;
   if ('is_active' in b) patch.is_active = !!b.is_active;
   if ('sort_order' in b) patch.sort_order = Number(b.sort_order) || 100;

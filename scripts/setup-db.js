@@ -72,8 +72,16 @@ async function main() {
 
   /* ── services ── */
   for (const s of seed.services) {
-    const found = await db.from('services').select('id').eq('slug', s.slug).maybeSingle();
-    if (found.data) { console.log('· service exists:', s.name); continue; }
+    const found = await db.from('services').select('id,image_url').eq('slug', s.slug).maybeSingle();
+    if (found.data) {
+      if (s.image_url && found.data.image_url !== s.image_url) {
+        await db.from('services').update({ image_url: s.image_url }).eq('slug', s.slug);
+        console.log('✓ service photo updated:', s.name);
+      } else {
+        console.log('· service exists:', s.name);
+      }
+      continue;
+    }
     await db.from('services').insert({ ...s, is_active: true });
     console.log('✓ service:', s.name);
   }

@@ -8,21 +8,25 @@
 const services = [
   {
     name: 'Signature Balayage', slug: 'signature-balayage', category: 'Coloring',
+    image_url: '/assets/services/signature-balayage.jpg',
     description: 'Hand-painted dimensional color with a bespoke gloss and toner, finished with a blow-dry.',
     duration_minutes: 150, price_cents: 18500, badge: 'Signature', is_featured: true, sort_order: 10,
   },
   {
     name: 'Precision Haircut', slug: 'precision-haircut', category: 'Haircuts',
+    image_url: '/assets/services/precision-haircut.jpg',
     description: 'A tailored cut, wash and blow-dry shaped around your face, texture and routine.',
     duration_minutes: 45, price_cents: 6500, badge: 'Popular', is_featured: true, sort_order: 20,
   },
   {
     name: 'Gloss & Toning Treatment', slug: 'gloss-and-toning', category: 'Treatments',
+    image_url: '/assets/services/gloss-and-toning.jpg',
     description: 'Refresh vibrancy and add a mirror-like shine between coloring appointments.',
     duration_minutes: 45, price_cents: 8500, badge: 'Add-on', sort_order: 30,
   },
   {
     name: 'Bridal Updo Styling', slug: 'bridal-updo', category: 'Styling',
+    image_url: '/assets/services/bridal-updo.jpg',
     description: 'Custom formal styling with a trial session included, for the day itself and the morning after.',
     duration_minutes: 90, price_cents: 15000, badge: 'Specialty', sort_order: 40,
   },
@@ -48,11 +52,13 @@ const services = [
   },
   {
     name: 'Master Color Retouch', slug: 'master-color-retouch', category: 'Coloring',
+    image_url: '/assets/services/master-color-retouch.jpg',
     description: 'Root coverage and gloss refresh with Marcus, including a take-home care plan.',
     duration_minutes: 120, price_cents: 12000, sort_order: 90,
   },
   {
     name: 'Deep Conditioning Luxury', slug: 'deep-conditioning', category: 'Treatments',
+    image_url: '/assets/services/deep-conditioning.jpg',
     description: 'Intense moisture restoration mask for hair that needs a quiet afternoon.',
     duration_minutes: 30, price_cents: 5000, sort_order: 100,
   },
@@ -63,6 +69,7 @@ const services = [
   },
   {
     name: 'Bridal Trial & Day-Of Package', slug: 'bridal-package', category: 'Packages',
+    image_url: '/assets/services/bridal-updo.jpg',
     description: 'Trial run, wedding-day styling and touch-up kit — a calm morning, planned in advance.',
     duration_minutes: 150, price_cents: 25000, badge: 'Package', sort_order: 120,
   },

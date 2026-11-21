@@ -15,7 +15,7 @@ router.get('/services', wrap(async (req, res) => {
   const category = clean(req.query.category, 40);
   let q = db
     .from('services')
-    .select('id,name,slug,category,description,duration_minutes,price_cents,badge,is_featured,is_active,sort_order')
+    .select('id,name,slug,category,description,duration_minutes,price_cents,badge,is_featured,is_active,sort_order,image_url')
     .eq('is_active', true)
     .order('sort_order');
   if (category && category !== 'all') q = q.eq('category', category);
@@ -37,6 +37,8 @@ function mapService(s) {
     price: s.price_cents / 100,
     badge: s.badge || null,
     is_featured: !!s.is_featured,
+    image_url: s.image_url || null,
+    image_thumb: s.image_url ? s.image_url.replace(/\.jpg$/i, '-thumb.jpg') : null,
   };
 }
 

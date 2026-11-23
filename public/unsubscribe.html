@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-current-page="/unsubscribe">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Studio letters — Lumina Salon</title>
+<meta name="description" content="Manage the studio letters you receive from Lumina Salon. Unsubscribe or rejoin in one click." />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#faf4eb" />
+<link rel="icon" href="/assets/favicon.svg?v=75b4e0c3" type="image/svg+xml" />
+<link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2?v=066710ce" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2?v=d5c53a50" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/assets/css/style.css?v=0cc16665" />
+<script defer src="/assets/js/core.js?v=fbe61532"></script>
+<script defer src="/assets/js/unsubscribe.js?v=a5869754"></script>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+
+<header class="site-header">
+  <div class="container">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/" aria-label="Lumina Salon — home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 256 256" role="img" aria-hidden="true" focusable="false"><path d="M192 14C178 66 132 82 94 114C62 141 56 178 76 212C70 184 82 152 114 130C144 109 178 86 192 14Z" fill="currentColor"/><path d="M192 14C212 68 194 128 142 156C112 172 90 190 88 228C82 204 88 176 116 154C152 126 184 88 192 14Z" fill="currentColor"/><path d="M126 24C86 42 74 86 112 118C148 148 178 176 144 226C136 236 120 242 104 242C132 234 152 214 148 186C144 160 116 142 94 120C64 90 76 42 126 24Z" fill="currentColor"/><path d="M132 28C96 46 88 86 122 116C156 146 172 178 142 222C160 188 148 152 114 122C82 94 92 48 132 28Z" fill="#DEAD55"/><path d="M84 188C74 206 76 228 92 244C96 248 102 246 100 240C88 226 84 208 84 188Z" fill="currentColor"/></svg></span>
+        <span class="brand-text">Lumina<small>Hair Studio</small></span>
+      </a>
+      <div class="nav-actions">
+        <a class="nav-phone" href="tel:+15550198234" data-studio-phone-link><span data-icon="phone"></span><span data-studio-phone>(555) 019-8234</span></a>
+        <a class="btn btn-sm" href="/booking">Book Now</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="section-tight">
+    <div class="container-narrow">
+      <div class="card" id="unsub-card" style="padding:clamp(28px,4vw,44px)">
+        <p class="eyebrow">Studio letters</p>
+        <h1 class="headline-md mt-sm" id="unsub-title">One moment…</h1>
+        <p class="body-md mt-md" id="unsub-body">Checking your link.</p>
+
+        <div id="unsub-actions" class="row gap-md row-wrap mt-lg" hidden>
+          <button class="btn" type="button" id="unsub-yes">Unsubscribe me</button>
+          <button class="btn btn-outline" type="button" id="unsub-no">Keep me on the list</button>
+        </div>
+
+        <div id="unsub-done" hidden class="mt-lg">
+          <div class="row gap-md" style="align-items:flex-start">
+            <span class="feature-icon" style="margin:0" data-icon="checkCircle"></span>
+            <div>
+              <h2 class="title-md" id="unsub-done-title">You are unsubscribed</h2>
+              <p class="body-sm dim" id="unsub-done-body">You will not receive studio letters from us again. Anything you already had booked is unaffected.</p>
+            </div>
+          </div>
+          <div class="row gap-md row-wrap mt-lg">
+            <button class="btn btn-sm btn-outline" type="button" id="unsub-undo">Changed your mind?</button>
+            <a class="btn btn-sm btn-ghost" href="/booking">Book a chair</a>
+          </div>
+        </div>
+
+        <p class="body-sm dim mt-lg" style="max-width:52ch">
+          You are only on the letters list if you asked for it — booking an appointment is separate and never adds you to it.
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <span class="footer-legal">© <span data-year>2026</span> Lumina Salon. All rights reserved.<span class="credit">Made by <span class="credit-mark">Ink Studio</span></span></span>
+      <span class="row gap-md row-wrap"><a href="/contact">Contact</a><a href="/booking">Book</a><a href="/admin">Studio admin</a></span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

@@ -21,6 +21,7 @@
     phone: '<path d="M6.3 3.5h2.9l1.5 3.7-2 1.3a11 11 0 0 0 5.3 5.3l1.3-2 3.7 1.5v2.9c0 1.2-1 2.2-2.2 2.1A15.6 15.6 0 0 1 4.2 5.7c-.1-1.2.9-2.2 2.1-2.2Z"/>',
     pin: '<path d="M12 21s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 15 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.4"/>',
     mail: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.6 7.5 8.4 5.6 8.4-5.6"/>',
+    send: '<path d="m21 3-9.8 9.8"/><path d="M21 3l-6.4 18-3.4-8.2L3 9.4 21 3Z"/>',
     search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
     filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
     grid: '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
@@ -415,7 +416,10 @@
         if (!input.value.includes('@')) { toast('Please enter a valid email address.', { type: 'error' }); return; }
         btn.disabled = true;
         try {
-          const r = await api.post('/api/subscribe', { email: input.value.trim() });
+          const r = await api.post('/api/subscribe', {
+            email: input.value.trim(),
+            source: form.dataset.subscribe || 'footer',
+          });
           toast(r.message || 'You are on the list.');
           form.reset();
         } catch (err) {

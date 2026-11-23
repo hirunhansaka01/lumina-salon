@@ -221,6 +221,11 @@ router.post('/bookings', wrap(async (req, res) => {
     detail: `${service.name} with ${stylist.name} on ${body.date} at ${formatTime12(body.time)}`,
   }).then(() => {}).catch(() => {});
 
+  /* An unticked consent box means no studio letters — the booking email is separate. */
+  if (body.marketing_opt_in) {
+    await subscribeQuietly(email, 'booking', client.name);
+  }
+
   /* email the client + alert the studio — never blocks the booking */
   try {
     const studio = await studioContext(settings);
@@ -317,6 +322,8 @@ router.post('/contact', wrap(async (req, res) => {
   if (!EMAIL_RE.test(normEmail(body.email))) throw new ApiError(400, 'Please enter a valid email address.', 'VALIDATION');
   if (clean(body.message).length < 5) throw new ApiError(400, 'Please add a little more detail to your message.', 'VALIDATION');
 
+  if (body.marketing_opt_in) await subscribeQuietly(normEmail(body.email), 'contact', clean(body.name, 120));
+
   const { data } = await db
     .from('messages')
     .insert({
@@ -366,14 +373,145 @@ router.post('/contact', wrap(async (req, res) => {
   res.status(201).json({ ok: true, id: data.id, message: 'Thank you — your message is with us. We reply within 24 hours.' });
 }));
 
+/**
+ * Add an address to the letters list without ever failing the caller.
+ * Tick-box consent on the booking page and contact form lands here.
+ */
+async function subscribeQuietly(email, source, name) {
+  try {
+    const { data: existing } = await db
+      .from('subscribers')
+      .select('id,status')
+      .eq('email', email)
+      .maybeSingle();
+    if (!existing) {
+      await db.from('subscribers').insert({ email, source, name: name || null, status: 'active' });
+    } else if (existing.status !== 'active') {
+      await db
+        .from('subscribers')
+        .update({ status: 'active', unsubscribed_at: null, source })
+        .eq('id', existing.id);
+    }
+  } catch (err) {
+    console.warn('[subscribe] skipped:', err.message);
+  }
+}
+
 /* ─────────────────────────── Newsletter ─────────────────────────── */
 
+/**
+ * Join the studio letters list.
+ *
+ * This list is deliberately separate from `clients`: a booking puts you in the
+ * diary, it does not put you on a mailing list. Only rows here receive
+ * announcements.
+ */
 router.post('/subscribe', wrap(async (req, res) => {
-  const email = normEmail((req.body || {}).email);
+  const body = req.body || {};
+  const email = normEmail(body.email);
   if (!EMAIL_RE.test(email)) throw new ApiError(400, 'Please enter a valid email address.', 'VALIDATION');
-  const { data: existing } = await db.from('subscribers').select('id').eq('email', email).maybeSingle();
-  if (!existing) await db.from('subscribers').insert({ email, source: 'website' });
-  res.status(201).json({ ok: true, message: 'You are on the list. Look out for our seasonal letters.' });
+  const source = clean(body.source, 40) || 'website';
+
+  const { data: existing } = await db
+    .from('subscribers')
+    .select('id,status,token')
+    .eq('email', email)
+    .maybeSingle();
+
+  let row = existing;
+  let reactivated = false;
+  if (existing) {
+    /* Coming back after unsubscribing is a deliberate opt-in again. */
+    if (existing.status !== 'active') {
+      reactivated = true;
+      const { data } = await db
+        .from('subscribers')
+        .update({ status: 'active', unsubscribed_at: null, source })
+        .eq('id', existing.id)
+        .select('id,status,token')
+        .single();
+      row = data;
+    }
+  } else {
+    const { data } = await db
+      .from('subscribers')
+      .insert({ email, source, status: 'active' })
+      .select('id,status,token')
+      .single();
+    row = data;
+  }
+
+  res.status(201).json({
+    ok: true,
+    resubscribed: reactivated,
+    message: existing && existing.status !== 'active'
+      ? 'Welcome back — you are on the list again.'
+      : 'You are on the list. Look out for our seasonal letters.',
+  });
+}));
+
+/** Who a broadcast would reach — used by the admin before sending. */
+router.get('/unsubscribe/:token', wrap(async (req, res) => {
+  const token = clean(req.params.token, 64);
+  const { data } = await db
+    .from('subscribers')
+    .select('email,status,unsubscribed_at')
+    .eq('token', token)
+    .maybeSingle();
+  if (!data) throw new ApiError(404, 'That unsubscribe link is not valid any more.', 'NOT_FOUND');
+  res.json({
+    ok: true,
+    email: data.email,
+    status: data.status,
+    unsubscribed_at: data.unsubscribed_at,
+  });
+}));
+
+/**
+ * One click, no login. Idempotent so a second click (or a mail scanner that
+ * pre-fetches links) never errors in the reader's face.
+ */
+router.post('/unsubscribe/:token', wrap(async (req, res) => {
+  const token = clean(req.params.token, 64);
+  const { data } = await db
+    .from('subscribers')
+    .select('id,email,status')
+    .eq('token', token)
+    .maybeSingle();
+  if (!data) throw new ApiError(404, 'That unsubscribe link is not valid any more.', 'NOT_FOUND');
+
+  if (data.status !== 'unsubscribed') {
+    await db
+      .from('subscribers')
+      .update({ status: 'unsubscribed', unsubscribed_at: new Date().toISOString() })
+      .eq('id', data.id);
+  }
+
+  res.json({
+    ok: true,
+    email: data.email,
+    already: data.status === 'unsubscribed',
+    message: 'You are unsubscribed. You will not receive studio letters from us again.',
+  });
+}));
+
+/** Put someone back on the list from the same page, if they clicked by mistake. */
+router.post('/resubscribe/:token', wrap(async (req, res) => {
+  const token = clean(req.params.token, 64);
+  const { data } = await db
+    .from('subscribers')
+    .select('id,email,status')
+    .eq('token', token)
+    .maybeSingle();
+  if (!data) throw new ApiError(404, 'That link is not valid any more.', 'NOT_FOUND');
+
+  if (data.status !== 'active') {
+    await db
+      .from('subscribers')
+      .update({ status: 'active', unsubscribed_at: null })
+      .eq('id', data.id);
+  }
+  res.json({ ok: true, email: data.email, message: 'You are back on the list.' });
 }));
 
 /* ─────────────────────────── Reviews + studio info ─────────────────────────── */

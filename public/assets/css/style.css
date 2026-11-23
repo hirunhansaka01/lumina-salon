@@ -155,7 +155,8 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   margin-inline: auto;
   padding-inline: var(--page-margin);
 }
-.container-narrow { max-width: var(--container-narrow); }
+.container-narrow { max-width: var(--container-narrow); margin-inline: auto; padding-inline: var(--page-margin); text-align: center; }
+.container-narrow .card { text-align: left; }
 
 .section { padding-block: var(--section); }
 .section-tight { padding-block: clamp(40px, 5vw, 64px); }

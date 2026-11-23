@@ -631,43 +631,114 @@ router.delete('/announcements/:id', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-/** Email one announcement to every client who has booked before. */
+/**
+ * Email one announcement to the studio letters list.
+ *
+ * Deliberately NOT every client in the diary: a booking is a transaction, not
+ * consent to marketing. Only `subscribers` with status 'active' are emailed,
+ * and every message carries a one-click unsubscribe link.
+ */
 router.post('/announcements/:id/send', wrap(async (req, res) => {
   const { data: announcement } = await db.from('announcements').select('*').eq('id', req.params.id).maybeSingle();
   if (!announcement) throw new ApiError(404, 'Announcement not found.');
   if (!mailer.isConfigured()) throw new ApiError(400, 'Email is not configured yet.', 'SMTP_ERROR');
 
-  const { data: clients } = await db.from('clients').select('id,name,email').order('name');
-  const recipients = (clients || []).filter((c) => c && c.email);
-  if (!recipients.length) throw new ApiError(400, 'There are no clients to email yet.');
-  if ((req.body || {}).dry_run) {
-    return res.json({ ok: true, dry_run: true, recipients: recipients.map((c) => c.email) });
+  const { data: subs } = await db
+    .from('subscribers')
+    .select('id,email,name,status,source,token')
+    .eq('status', 'active')
+    .order('created_at');
+
+  let recipients = (subs || []).filter((s) => s && s.email);
+  const body = req.body || {};
+
+  /* a rehearsal aimed at one address: send nothing to anybody else */
+  if (body.to) {
+    const only = String(body.to).trim().toLowerCase();
+    recipients = recipients.filter((s) => s.email.toLowerCase() === only);
+    if (!recipients.length) throw new ApiError(400, `${only} is not on the letters list.`);
+  }
+
+  if (body.dry_run) {
+    return res.json({
+      ok: true,
+      dry_run: true,
+      count: recipients.length,
+      recipients: recipients.map((s) => s.email),
+    });
+  }
+  if (!recipients.length) {
+    throw new ApiError(400, 'Nobody has joined the studio letters list yet — there is no one to email.');
   }
 
   const settings = await getSettings(true);
   const studio = await studioContext(settings);
   let sent = 0; const failures = [];
-  for (const c of recipients) {
+  for (const sub of recipients) {
+    const unsubUrl = `${studio.url}/unsubscribe?token=${encodeURIComponent(sub.token)}`;
     const result = await mailer.send({
-      to: c.email,
+      to: sub.email,
       subject: announcement.title,
       template: 'announcement',
       replyTo: studio.email,
+      /* one-click unsubscribe in the client's own chrome, too */
+      headers: {
+        'List-Unsubscribe': `<${unsubUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
       data: {
         name: studio.name, address: studio.address, phone: studio.phone, email: studio.email,
         preheader: announcement.message || announcement.title,
         headline: announcement.title,
-        intro: `Hello ${String(c.name || '').split(' ')[0]},`,
+        intro: `Hello ${String(sub.name || '').split(' ')[0] || 'there'},`,
         body: announcement.message,
         buttonLabel: announcement.link_label || 'Book a chair',
         buttonUrl: announcement.link_url || `${studio.url}/booking`,
+        unsubscribeUrl: unsubUrl,
       },
     });
-    if (result.ok) sent += 1; else failures.push({ email: c.email, error: result.error });
+    if (result.ok) {
+      sent += 1;
+      await db.from('subscribers').update({ last_sent_at: new Date().toISOString() }).eq('id', sub.id);
+    } else {
+      failures.push({ email: sub.email, error: result.error });
+    }
   }
-  await db.from('announcements').update({ sent_at: new Date().toISOString(), sent_count: sent }).eq('id', announcement.id);
-  await log(req.user, 'announcement_sent', `${announcement.title} → ${sent} clients`);
+  const wasTest = !!(body.to);
+  if (!wasTest) {
+    await db.from('announcements').update({ sent_at: new Date().toISOString(), sent_count: sent }).eq('id', announcement.id);
+  }
+  await log(req.user, wasTest ? 'announcement_test_sent' : 'announcement_sent', `${announcement.title} → ${sent} subscriber${sent === 1 ? '' : 's'}`);
   res.json({ ok: true, sent, failed: failures.length, failures: failures.slice(0, 5) });
+}));
+
+/* ─────────────────────────── Studio letters list ─────────────────────────── */
+
+router.get('/subscribers', wrap(async (req, res) => {
+  const status = clean(req.query.status, 20);
+  let q = db.from('subscribers').select('id,email,name,status,source,created_at,unsubscribed_at,last_sent_at').order('created_at', { ascending: false });
+  if (['active', 'unsubscribed'].includes(status)) q = q.eq('status', status);
+  const { data } = await q.limit(500);
+
+  const all = data || [];
+  const [{ count: clientCount }, { count: activeCount }, { count: unsubCount }] = await Promise.all([
+    db.from('clients').select('id').count(),
+    db.from('subscribers').select('id').eq('status', 'active').count(),
+    db.from('subscribers').select('id').eq('status', 'unsubscribed').count(),
+  ]);
+
+  res.json({
+    ok: true,
+    subscribers: all,
+    stats: { active: activeCount || 0, unsubscribed: unsubCount || 0, clients: clientCount || 0 },
+  });
+}));
+
+/** Remove someone from the list entirely. */
+router.delete('/subscribers/:id', wrap(async (req, res) => {
+  const { data } = await db.from('subscribers').delete().eq('id', req.params.id).select('email').maybeSingle();
+  if (data) await log(req.user, 'subscriber_deleted', data.email);
+  res.json({ ok: true });
 }));
 
 /* ─────────────────────────── Messages & reviews ─────────────────────────── */

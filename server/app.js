@@ -59,6 +59,8 @@ const pages = ['index', 'services', 'booking', 'contact', 'admin'];
 app.get('/:page', (req, res, next) => {
   const page = String(req.params.page).replace(/\.html$/, '');
   if (pages.includes(page)) return res.sendFile(path.join(pub, `${page}.html`));
+  /* /unsubscribe?token=... — a page of its own so the emailed link always resolves */
+  if (page === 'unsubscribe') return res.sendFile(path.join(pub, 'unsubscribe.html'));
   next();
 });
 

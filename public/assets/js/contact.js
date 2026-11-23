@@ -19,6 +19,7 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const data = Object.fromEntries(new FormData(form).entries());
+      data.marketing_opt_in = !!H.qs('#c-consent')?.checked;
       let valid = true;
 
       setError('name', ''); setError('email', ''); setError('message', '');

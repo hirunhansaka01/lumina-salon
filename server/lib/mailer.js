@@ -77,7 +77,7 @@ async function verify() {
  * @param {object} opts { to, subject, template, data, replyTo, text }
  * @returns {Promise<{ok:boolean, id?:string, error?:string, skipped?:boolean}>}
  */
-async function send({ to, subject, template, data = {}, replyTo, text }) {
+async function send({ to, subject, template, data = {}, replyTo, text, headers = {} }) {
   if (!to) return { ok: false, error: 'No recipient.' };
   if (!isConfigured()) {
     console.warn('[mail] skipped — SMTP not configured');
@@ -104,7 +104,10 @@ async function send({ to, subject, template, data = {}, replyTo, text }) {
       replyTo: replyTo || c.fromEmail,
       html,
       text: text || stripHtml(html),
-      headers: { 'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).slice(2, 8)}` },
+      headers: {
+        'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ...headers,
+      },
     });
     console.log('[mail] sent', template || 'text', '→', to, info.messageId);
     return { ok: true, id: info.messageId };

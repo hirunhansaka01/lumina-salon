@@ -26,7 +26,7 @@ const esc = (s = '') => String(s)
 
 /* ── shared pieces ─────────────────────────────────────────────────── */
 
-function shell({ preheader = '', title = '', body = '', footerNote = '', studio = {} }) {
+function shell({ preheader = '', title = '', body = '', footerNote = '', studio = {}, reason = '' }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,7 +75,7 @@ function shell({ preheader = '', title = '', body = '', footerNote = '', studio 
               <a href="mailto:${esc(studio.email || '')}" style="color:${C.primary};text-decoration:none;">${esc(studio.email || '')}</a>
             </p>
             <p style="margin:18px 0 0;font-size:11px;color:#9A948B;">
-              You are receiving this because you booked an appointment with us.
+              ${reason ? esc(reason) : 'You are receiving this because you booked an appointment with us.'}
             </p>
           </td>
         </tr>
@@ -256,8 +256,19 @@ const TEMPLATES = {
       </td></tr></table></td></tr>` : '',
       `<tr><td align="center" style="padding:28px 34px 6px;">${button(d.buttonLabel || 'Book a chair', d.buttonUrl || '')}</td></tr>`,
       footnote(d.footnote || `Warmly, the ${esc(d.name || 'Lumina Salon')} team · ${esc(d.address || '')}`),
+      d.unsubscribeUrl ? `<tr><td style="padding:10px 34px 26px;text-align:center;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.7;color:#9A948B;">
+        You are on the studio letters list because you asked for the occasional note from us.
+        <a href="${esc(d.unsubscribeUrl)}" style="color:${C.ink2};text-decoration:underline;">Unsubscribe in one click</a>.
+      </td></tr>` : '',
     ].join('');
-    return shell({ preheader: d.preheader, title: d.headline, body, studio: d, footerNote: d.signoff || '' });
+    return shell({
+      preheader: d.preheader,
+      title: d.headline,
+      body,
+      studio: d,
+      footerNote: d.signoff || '',
+      reason: 'You are receiving this because you joined the studio letters list.',
+    });
   },
 };
 

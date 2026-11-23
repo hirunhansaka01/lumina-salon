@@ -88,7 +88,7 @@
     });
 
     const initial = (location.hash || '#overview').replace('#', '');
-    navigate(['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'email', 'hours', 'settings'].includes(initial) ? initial : 'overview');
+    navigate(['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'letters', 'email', 'hours', 'settings'].includes(initial) ? initial : 'overview');
   }
 
   /* ── router ──────────────────────────────────────────────────── */
@@ -99,13 +99,14 @@
     clients: ['Clients & formulas', 'Notes, history and colour recipes'],
     messages: ['Inbox', 'Enquiries from the website'],
     announcements: ['Announcements', 'What the website says, and when'],
+    letters: ['Studio letters', 'Your mailing list — separate from your clients'],
     email: ['Email', 'Your sending account and delivery'],
     hours: ['Working hours', 'Weekly availability for each stylist'],
     settings: ['Settings', 'Booking rules, studio details and security'],
   };
 
   /* every view this build can actually paint */
-  const VIEW_RENDERERS = ['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'email', 'hours', 'settings'];
+  const VIEW_RENDERERS = ['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'letters', 'email', 'hours', 'settings'];
 
   async function navigate(view, opts = {}) {
     state.view = view;
@@ -126,6 +127,7 @@
       if (view === 'clients') await renderClients();
       if (view === 'messages') await renderMessages();
       if (view === 'announcements') await renderAnnouncements();
+      if (view === 'letters') await renderLetters();
       if (view === 'email') await renderEmail();
       if (view === 'hours') await renderHours();
       if (view === 'settings') await renderSettings();
@@ -1148,12 +1150,13 @@
       const a = announcements.find((x) => x.id === b.dataset.sendAnn);
       const check = await H.api.post(`/api/admin/announcements/${a.id}/send`, { dry_run: true }).catch((e) => ({ error: e.message }));
       if (check.error) return H.toast(check.error, { type: 'error' });
-      const list = check.recipients || [];
-      if (!confirm(`Email “${a.title}” to ${list.length} client${list.length === 1 ? '' : 's'}?`)) return;
+      const list = check.count || (check.recipients || []).length;
+      if (!list) return H.toast('Nobody has joined the studio letters list yet — there is no one to email.', { type: 'error' });
+      if (!confirm(`Email “${a.title}” to ${list} subscriber${list === 1 ? '' : 's'}?\n\nThis goes only to the studio letters list, never to every client in the diary. Each message carries a one-click unsubscribe link.`)) return;
       b.disabled = true; b.textContent = 'Sending…';
       try {
         const r = await H.api.post(`/api/admin/announcements/${a.id}/send`, {});
-        H.toast(`Sent to ${r.sent} client${r.sent === 1 ? '' : 's'}${r.failed ? ` · ${r.failed} failed` : ''}.`);
+        H.toast(`Sent to ${r.sent} subscriber${r.sent === 1 ? '' : 's'}${r.failed ? ` · ${r.failed} failed` : ''}.`);
         renderAnnouncements();
       } catch (err) { H.toast(err.message, { type: 'error' }); b.disabled = false; b.textContent = 'Email to clients'; }
     }));
@@ -1240,6 +1243,133 @@
   /* ══════════════════════════════════════════════════════════════
      EMAIL — sending account, connection test
      ══════════════════════════════════════════════════════════════ */
+  /* ── Studio letters: the separate mailing list ──────────────── */
+  async function renderLetters() {
+    const data = await H.api.get('/api/admin/subscribers');
+    const subs = data.subscribers || [];
+    const stats = data.stats || { active: 0, unsubscribed: 0, clients: 0 };
+    H.qs('#page-sub').textContent = 'Your mailing list — separate from your clients';
+
+    const active = subs.filter((x) => x.status === 'active');
+    const off = subs.filter((x) => x.status !== 'active');
+
+    const row = (x) => `
+      <tr>
+        <td>
+          <div class="stack" style="gap:2px">
+            <strong>${H.esc(x.email)}</strong>
+            ${x.name ? `<span class="body-sm dim">${H.esc(x.name)}</span>` : ''}
+          </div>
+        </td>
+        <td><span class="chip chip-sm ${x.status === 'active' ? 'chip-primary' : 'chip-outline'}">${x.status === 'active' ? 'Subscribed' : 'Unsubscribed'}</span></td>
+        <td class="body-sm dim">${H.esc(prettySource(x.source))}</td>
+        <td class="body-sm dim tabular">${H.esc(fmtDay(x.created_at))}</td>
+        <td style="text-align:right">
+          <button class="btn btn-icon" style="width:34px;height:34px" data-del-sub="${x.id}" title="Remove from list">${H.icon('trash','icon')}</button>
+        </td>
+      </tr>`;
+
+    main().innerHTML = `
+      <div class="grid grid-3" style="gap:14px;margin-bottom:18px">
+        <section class="card stat-card">
+          <p class="stat-label">On the list</p>
+          <p class="stat-value tabular">${stats.active}</p>
+          <p class="body-sm dim">people who asked for studio letters</p>
+        </section>
+        <section class="card stat-card">
+          <p class="stat-label">Unsubscribed</p>
+          <p class="stat-value tabular">${stats.unsubscribed}</p>
+          <p class="body-sm dim">removed themselves, kept for the record</p>
+        </section>
+        <section class="card stat-card">
+          <p class="stat-label">Clients in the diary</p>
+          <p class="stat-value tabular">${stats.clients}</p>
+          <p class="body-sm dim">never emailed marketing unless they opted in</p>
+        </section>
+      </div>
+
+      <section class="card" style="margin-bottom:16px">
+        <div class="row gap-md" style="align-items:flex-start">
+          <span class="feature-icon" style="margin:0">${H.icon('info','icon')}</span>
+          <div>
+            <h2 class="title-md">Two lists, kept apart</h2>
+            <p class="body-sm dim" style="max-width:78ch">
+              Booking an appointment puts someone in <strong>Clients</strong> — they get their receipt and reminders, nothing else.
+              Only addresses here receive announcements, and every announcement carries a one-click unsubscribe link.
+              The footer box, the booking checkbox and the contact form all add people to this list.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="row-between" style="align-items:center;gap:12px;flex-wrap:wrap">
+          <h2 class="title-lg">Subscribed <span class="body-sm dim">(${active.length})</span></h2>
+          <div class="row gap-sm">
+            <input class="input" id="sub-search" type="search" placeholder="Filter by email" style="max-width:220px" />
+            <button class="btn btn-sm btn-outline" id="sub-export">${H.icon('arrow')}Copy all emails</button>
+          </div>
+        </div>
+        ${active.length ? `
+        <div class="table-wrap mt-md">
+          <table class="table"><thead><tr><th>Email</th><th>Status</th><th>Signed up via</th><th>Joined</th><th></th></tr></thead>
+          <tbody id="sub-rows">${active.map(row).join('')}</tbody></table>
+        </div>` : `
+        <div class="empty mt-md">${H.icon('send')}<p class="body-md">Nobody has joined yet. The footer box on every page is the front door.</p></div>`}
+
+        ${off.length ? `
+        <details class="mt-lg">
+          <summary class="body-sm dim" style="cursor:pointer">Unsubscribed (${off.length})</summary>
+          <div class="table-wrap mt-md">
+            <table class="table"><thead><tr><th>Email</th><th>Status</th><th>Signed up via</th><th>Joined</th><th></th></tr></thead>
+            <tbody>${off.map(row).join('')}</tbody></table>
+          </div>
+        </details>` : ''}
+      </section>`;
+
+    H.qsa('[data-del-sub]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('Remove this address from the list completely?')) return;
+      await H.api.del(`/api/admin/subscribers/${b.dataset.delSub}`);
+      H.toast('Removed from the list.');
+      renderLetters();
+    }));
+
+    const search = H.qs('#sub-search');
+    if (search) search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      H.qsa('#sub-rows tr').forEach((tr) => { tr.hidden = !!q && !tr.textContent.toLowerCase().includes(q); });
+    });
+
+    H.qs('#sub-export')?.addEventListener('click', async () => {
+      const list = active.map((x) => x.email).join(', ');
+      try {
+        await navigator.clipboard.writeText(list);
+        H.toast(`Copied ${active.length} address${active.length === 1 ? '' : 'es'}.`);
+      } catch {
+        H.toast('Copy failed — select the addresses by hand.', { type: 'error' });
+      }
+    });
+  }
+
+  function prettySource(source) {
+    return ({
+      footer: 'Footer box',
+      'footer-home': 'Footer — home',
+      'footer-services': 'Footer — services',
+      'footer-booking': 'Footer — booking',
+      'footer-contact': 'Footer — contact',
+      website: 'Footer box',
+      booking: 'Booking checkbox',
+      contact: 'Contact form',
+    })[source] || (source ? source.replace(/-/g, ' ') : 'Website');
+  }
+
+  function fmtDay(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
   async function renderEmail() {
     const { email } = await H.api.get('/api/admin/email/status');
     H.qs('#page-sub').textContent = 'Transactional email for bookings and client notices';
@@ -1288,7 +1418,9 @@
                 <tr><td>Appointment moved</td><td>You change the date or time</td><td>Client</td></tr>
                 <tr><td>Appointment cancelled</td><td>You cancel</td><td>Client</td></tr>
                 <tr><td>Website enquiry</td><td>Contact form submitted</td><td>Studio inbox</td></tr>
-                <tr><td>Announcement</td><td>You press “Email to clients”</td><td>Every client with an email</td></tr>
+                <tr><td>Announcement</td><td>You press “Email to clients”</td><td>Studio letters list only</td></tr>
+                <tr><td>Welcome to the list</td><td>Not sent — the footer box just adds them</td><td>—</td></tr>
+                <tr><td>Unsubscribe confirmation</td><td>They press unsubscribe</td><td>On-page, no email needed</td></tr>
               </tbody>
             </table>
           </div>

@@ -1001,40 +1001,126 @@
      INBOX
      ══════════════════════════════════════════════════════════════ */
   async function renderMessages() {
-    const { messages } = await H.api.get('/api/admin/messages');
+    const [{ messages }, mail] = await Promise.all([
+      H.api.get('/api/admin/messages'),
+      H.api.get('/api/admin/email/status').catch(() => null),
+    ]);
     state.messages = messages;
+    state.mailFrom = mail && mail.email && mail.email.from ? mail.email.from : null;
+    /* pull the threads so replies show without a second click */
+    const threads = {};
+    await Promise.all(messages.slice(0, 40).map(async (m) => {
+      try { threads[m.id] = (await H.api.get(`/api/admin/messages/${m.id}`)).replies || []; }
+      catch { threads[m.id] = []; }
+    }));
+
     const fresh = messages.filter((m) => m.status === 'new');
+    const answered = messages.filter((m) => m.status === 'replied');
     updateBadges(state.overview?.stats?.pending_requests || 0, fresh.length);
-    H.qs('#page-sub').textContent = `${messages.length} messages · ${fresh.length} unread`;
+    H.qs('#page-sub').textContent = `${messages.length} messages · ${fresh.length} waiting${answered.length ? ` · ${answered.length} answered` : ''}`;
 
     main().innerHTML = messages.length ? `
+      <p class="body-sm dim" style="max-width:70ch;margin:0 0 16px">
+        Replies are sent from <strong>${H.esc(state.mailFrom || 'the studio account')}</strong> through the studio's own email account,
+        so the client can just reply straight back to you.
+      </p>
       <div class="stack gap-md">
-        ${messages.map((m) => `
-          <article class="card" style="padding:20px">
+        ${messages.map((m) => {
+          const thread = threads[m.id] || [];
+          const isNew = m.status === 'new';
+          return `
+          <article class="card msg-card ${isNew ? 'is-unread' : ''}" data-msg="${m.id}" style="padding:20px">
             <div class="row-between" style="align-items:flex-start;gap:16px">
               <div class="row gap-md" style="min-width:0">
-                <span class="avatar ${m.status === 'new' ? 'avatar-gold' : ''}">${H.initials(m.name)}</span>
+                <span class="avatar ${isNew ? 'avatar-gold' : ''}">${H.initials(m.name)}</span>
                 <div style="min-width:0">
                   <div class="row gap-sm row-wrap">
                     <h3 class="title-md">${H.esc(m.name)}</h3>
-                    ${m.status === 'new' ? '<span class="chip chip-warning chip-sm">New</span>' : `<span class="chip chip-sm chip-outline">${H.esc(m.status)}</span>`}
+                    ${isNew ? '<span class="chip chip-warning chip-sm">New</span>'
+                      : m.status === 'replied' ? '<span class="chip chip-primary chip-sm">Replied</span>'
+                      : `<span class="chip chip-sm chip-outline">${H.esc(m.status)}</span>`}
                   </div>
                   <p class="body-sm dim">${H.esc(m.email)}${m.phone ? ` · ${H.esc(m.phone)}` : ''} · ${relativeTime(m.created_at)}</p>
                 </div>
               </div>
               <div class="row gap-sm">
-                <a class="btn btn-sm" href="mailto:${H.esc(m.email)}?subject=${encodeURIComponent('Re: ' + (m.subject || 'Your message to Lumina Salon'))}">Reply</a>
-                ${m.status === 'new' ? `<button class="btn btn-sm btn-ghost" data-mark-read="${m.id}">Mark read</button>` : ''}
+                <button class="btn btn-sm" data-reply-open="${m.id}">${H.icon('mail')}Reply</button>
+                ${isNew ? `<button class="btn btn-sm btn-ghost" data-mark-read="${m.id}">Mark read</button>` : ''}
               </div>
             </div>
+
             <p class="title-sm mt-md">${H.esc(m.subject || 'Website enquiry')}</p>
             <p class="body-md mt-sm">${H.esc(m.message)}</p>
-          </article>`).join('')}
+
+            ${thread.length ? `
+            <div class="msg-thread mt-md">
+              <p class="body-sm dim" style="letter-spacing:.12em;text-transform:uppercase;font-size:10px">Your replies</p>
+              ${thread.map((r) => `
+                <div class="msg-reply">
+                  <div class="row-between" style="gap:10px;align-items:baseline">
+                    <strong class="body-sm">${H.esc(r.sent_by || 'Studio')} → ${H.esc(r.to_email)}</strong>
+                    <span class="body-sm dim">${relativeTime(r.created_at)}</span>
+                  </div>
+                  <p class="body-sm mt-sm" style="white-space:pre-line">${H.esc(r.body)}</p>
+                </div>`).join('')}
+            </div>` : ''}
+
+            <form class="msg-compose" data-reply-form="${m.id}" hidden>
+              <div class="field">
+                <label class="field-label" for="reply-subject-${m.id}">Subject</label>
+                <input class="input" id="reply-subject-${m.id}" name="subject" value="${H.esc('Re: ' + (m.subject || 'your message to the studio'))}" />
+              </div>
+              <div class="field mt-sm">
+                <label class="field-label" for="reply-body-${m.id}">Your reply to ${H.esc(m.name.split(' ')[0])}</label>
+                <textarea class="textarea" id="reply-body-${m.id}" name="body" rows="6"
+                  placeholder="Hello ${H.esc(m.name.split(' ')[0])},&#10;&#10;Thanks for getting in touch — yes, we can help with that…"></textarea>
+                <span class="field-hint">Goes to ${H.esc(m.email)} from your studio email account. Plain text, signed for you.</span>
+              </div>
+              <div class="row gap-sm" style="justify-content:flex-end">
+                <button type="button" class="btn btn-sm btn-ghost" data-reply-cancel="${m.id}">Cancel</button>
+                <button type="submit" class="btn btn-sm" data-reply-send="${m.id}">${H.icon('send')}Send reply</button>
+              </div>
+            </form>
+          </article>`;
+        }).join('')}
       </div>` : `<div class="empty">${H.icon('mail')}<h3 class="headline-sm">Inbox zero</h3><p class="body-md">New enquiries from the website appear here.</p></div>`;
 
     H.qsa('[data-mark-read]').forEach((b) => b.addEventListener('click', async () => {
       await H.api.patch(`/api/admin/messages/${b.dataset.markRead}`, { status: 'read' });
       renderMessages();
+    }));
+
+    H.qsa('[data-reply-open]').forEach((b) => b.addEventListener('click', () => {
+      const form = H.qs(`[data-reply-form="${b.dataset.replyOpen}"]`);
+      form.hidden = !form.hidden;
+      if (!form.hidden) form.querySelector('textarea').focus();
+    }));
+    H.qsa('[data-reply-cancel]').forEach((b) => b.addEventListener('click', () => {
+      H.qs(`[data-reply-form="${b.dataset.replyCancel}"]`).hidden = true;
+    }));
+
+    H.qsa('[data-reply-form]').forEach((form) => form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = form.dataset.replyForm;
+      const btn = form.querySelector('[data-reply-send]');
+      const body = form.querySelector('textarea').value.trim();
+      const subject = form.querySelector('input[name=subject]').value.trim();
+      if (body.length < 2) return H.toast('Write a reply first.', { type: 'error' });
+
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.textContent = 'Sending…';
+      try {
+        const r = await H.api.post(`/api/admin/messages/${id}/reply`, { body, subject });
+        H.toast(r.message || 'Reply sent.', { type: 'success' });
+        form.reset();
+        form.hidden = true;
+        renderMessages();
+      } catch (err) {
+        H.toast(err.message, { type: 'error' });
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
     }));
   }
 

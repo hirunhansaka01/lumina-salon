@@ -229,6 +229,55 @@ const TEMPLATES = {
     return shell({ preheader: d.preheader, title: d.headline, body, studio: d });
   },
 
+  /**
+   * A person at the studio answering an enquiry. Warm, plain, signed —
+   * it should read like a letter, not a notification.
+   */
+  'studio-reply'(d) {
+    const body = [
+      `<tr>
+        <td style="padding:34px 34px 0;">
+          <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:0.24em;text-transform:uppercase;color:${C.gold};">
+            ${esc(d.name || 'Lumina Salon')}
+          </p>
+          <h1 style="margin:12px 0 0;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:26px;line-height:1.25;color:${C.ink};">
+            ${esc(d.headline || 'Your message to us')}
+          </h1>
+        </td>
+      </tr>`,
+      `<tr><td style="padding:22px 34px 0;">
+        <div style="height:1px;background:${C.line};"></div>
+      </td></tr>`,
+      `<tr><td style="padding:22px 34px 0;">
+        <div style="font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.75;color:${C.ink};">${d.bodyHtml}</div>
+      </td></tr>`,
+      d.signature ? `<tr><td style="padding:26px 34px 0;">
+        <div style="font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:1.7;color:${C.ink2};">${d.signature}</div>
+      </td></tr>` : '',
+      d.original ? `<tr><td style="padding:30px 34px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+               style="background:${C.bg};border-left:3px solid ${C.gold};border-radius:6px;">
+          <tr><td style="padding:16px 18px;">
+            <p style="margin:0 0 6px;font-family:Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#9A948B;">
+              Your original message
+            </p>
+            <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:1.7;color:${C.ink2};white-space:pre-line;">${esc(d.original)}</p>
+          </td></tr>
+        </table>
+      </td></tr>` : '',
+      `<tr><td align="center" style="padding:28px 34px 34px;">
+        ${button(d.buttonLabel || 'Book a chair', d.buttonUrl || '')}
+      </td></tr>`,
+    ].join('');
+    return shell({
+      preheader: d.preheader || '',
+      title: d.headline || 'Your message to us',
+      body,
+      studio: d,
+      reason: 'You are receiving this because you wrote to us through our website.',
+    });
+  },
+
   /** Internal: something happened in the diary. */
   'studio-alert'(d) {
     const body = [

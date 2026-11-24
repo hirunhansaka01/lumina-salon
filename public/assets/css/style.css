@@ -915,6 +915,27 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .footer-social a:hover { background: rgba(255, 252, 246, 0.1); border-color: var(--secondary); transform: translateY(-2px); }
 .footer-social svg { width: 16px; height: 16px; }
 
+
+/* ── Inbox: reply composer and thread ────────────────────────── */
+.msg-card.is-unread { border-color: rgba(222, 173, 85, 0.45); box-shadow: 0 1px 0 rgba(222, 173, 85, 0.25); }
+.msg-compose {
+  margin-top: 18px; padding-top: 18px;
+  border-top: 1px dashed var(--line);
+}
+.msg-compose .textarea { min-height: 140px; }
+.msg-thread { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); }
+.msg-reply {
+  margin-top: 10px; padding: 14px 16px;
+  background: var(--surface-2, #F3EFE7);
+  border-left: 3px solid var(--secondary);
+  border-radius: 8px;
+}
+@media (max-width: 560px) {
+  .msg-card .row-between { flex-wrap: wrap; }
+  .msg-compose .row { flex-direction: column-reverse; }
+  .msg-compose .btn { width: 100%; }
+}
+
 /* ── 8. Hero ─────────────────────────────────────────────────────── */
 .hero { position: relative; padding-top: clamp(28px, 5vw, 56px); }
 .hero-grid {

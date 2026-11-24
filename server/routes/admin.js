@@ -754,6 +754,119 @@ router.patch('/messages/:id', wrap(async (req, res) => {
   res.json({ ok: true, message: data });
 }));
 
+/**
+ * Answer an enquiry from inside the admin.
+ *
+ * Sends through the studio's own SMTP account, so the client sees the studio's
+ * address and a plain reply from their inbox lands back with the studio. Every
+ * reply is stored against the message so the thread survives a page reload.
+ */
+router.post('/messages/:id/reply', wrap(async (req, res) => {
+  const body = req.body || {};
+  const { data: message } = await db
+    .from('messages')
+    .select('id,name,email,subject,message,status,created_at')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (!message) throw new ApiError(404, 'That message is no longer here.');
+
+  const text = String(body.body || '').trim();
+  if (text.length < 2) throw new ApiError(400, 'Write a reply first.', 'VALIDATION');
+  if (text.length > 5000) throw new ApiError(400, 'That reply is too long — keep it under 5000 characters.', 'VALIDATION');
+  if (!mailer.isConfigured()) {
+    throw new ApiError(400, 'Email is not configured, so the reply cannot be sent.', 'SMTP_ERROR');
+  }
+
+  const settings = await getSettings();
+  const studio = await studioContext(settings);
+
+  /* the client's own words, trimmed away from the address */
+  const original = String(message.message || '').trim();
+  const quoted = original.length > 900 ? `${original.slice(0, 900)}…` : original;
+  const subject = clean(body.subject, 160)
+    || `Re: ${message.subject || 'your message to Lumina Salon'}`;
+
+  const signatureName = (req.user && req.user.name) || 'The studio';
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 14px;">${escWithBreaks(p)}</p>`)
+    .join('');
+
+  const result = await mailer.send({
+    to: message.email,
+    subject,
+    template: 'studio-reply',
+    replyTo: studio.email,
+    data: {
+      name: studio.name,
+      address: studio.address,
+      phone: studio.phone,
+      email: studio.email,
+      preheader: text.slice(0, 120),
+      headline: 'A note back from the studio',
+      bodyHtml: paragraphs,
+      signature: `<strong style="color:#172726;">${escapeHtml(signatureName)}</strong><br />${escapeHtml(studio.name)}<br />
+        <a href="tel:${String(studio.phone || '').replace(/[^0-9+]/g, '')}" style="color:#005552;text-decoration:none;">${escapeHtml(studio.phone || '')}</a>`,
+      original: quoted,
+      buttonLabel: 'Book a chair',
+      buttonUrl: `${studio.url}/booking`,
+    },
+    text: `${text}\n\n— ${signatureName}, ${studio.name}\n${studio.phone} · ${studio.email}\n\nYour original message:\n${quoted}`,
+  });
+
+  if (!result.ok) {
+    throw new ApiError(502, `The email did not go out: ${result.error || 'unknown error'}. Nothing was saved — try again.`, 'SMTP_ERROR');
+  }
+
+  const { data: saved } = await db
+    .from('message_replies')
+    .insert({
+      message_id: message.id,
+      body: text,
+      to_email: message.email,
+      subject,
+      sent_by: signatureName,
+      provider_id: result.id || null,
+    })
+    .select('*')
+    .single();
+
+  /* replying closes the loop: it is no longer an unanswered enquiry */
+  if (message.status === 'new') {
+    await db.from('messages').update({ status: 'replied' }).eq('id', message.id);
+  }
+  await log(req.user, 'message_replied', `${message.name} <${message.email}>`);
+
+  res.status(201).json({
+    ok: true,
+    reply: saved,
+    message: `Reply sent to ${message.email}.`,
+  });
+}));
+
+/** The thread for one enquiry. */
+router.get('/messages/:id', wrap(async (req, res) => {
+  const { data: message } = await db.from('messages').select('*').eq('id', req.params.id).maybeSingle();
+  if (!message) throw new ApiError(404, 'That message is no longer here.');
+  const { data: replies } = await db
+    .from('message_replies')
+    .select('id,body,to_email,subject,sent_by,created_at')
+    .eq('message_id', req.params.id)
+    .order('created_at');
+  res.json({ ok: true, message, replies: replies || [] });
+}));
+
+function escapeHtml(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Newlines inside a paragraph become line breaks; nothing else is trusted. */
+function escWithBreaks(value = '') {
+  return escapeHtml(value).replace(/\n/g, '<br />');
+}
+
 router.get('/reviews', wrap(async (_req, res) => {
   const { data } = await db.from('reviews').select('*').order('sort_order');
   res.json({ ok: true, reviews: data || [] });

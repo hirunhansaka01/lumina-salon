@@ -13,6 +13,42 @@
     `<path d="M84 188C74 206 76 228 92 244C96 248 102 246 100 240C88 226 84 208 84 188Z" fill="currentColor"/>` +
     `</svg>`;
 
+  /* The team grid comes from the database, so adding a stylist in the admin
+     puts a new face on the homepage without touching code. */
+  const AVATAR_TONES = ['chip-primary', 'chip-plum', 'chip-gold'];
+  async function loadTeam() {
+    const mount = H.qs('#home-stylists');
+    if (!mount) return;
+    try {
+      const { stylists } = await H.api.get('/api/stylists');
+      if (!stylists.length) return;
+      mount.innerHTML = stylists.map((t, i) => `
+        <article class="card stylist-card reveal" style="--reveal-delay:${i * 70}ms">
+          <div class="stylist-photo">
+            ${t.avatar_url
+              ? `<img src="${H.esc(t.avatar_url)}" alt="${H.esc(t.name)}${t.title ? `, ${H.esc(t.title)}` : ''}" loading="lazy" decoding="async" />`
+              : `<div class="stylist-photo--initials" aria-hidden="true">
+                   <span>${H.esc(inits(t.name))}</span>
+                 </div>`}
+          </div>
+          <div class="stylist-body">
+            <div>
+              <h3 class="headline-sm">${H.esc(t.name)}</h3>
+              <p class="body-sm">${H.esc(t.title || 'Stylist')}</p>
+              ${t.bio ? `<p class="body-sm dim mt-sm clamp-2">${H.esc(t.bio)}</p>` : ''}
+            </div>
+            ${(t.specialties || []).length ? `<div class="stylist-tags">${t.specialties.slice(0, 3).map((x, n) =>
+              `<span class="chip chip-sm ${AVATAR_TONES[n % AVATAR_TONES.length]}">${H.esc(x)}</span>`).join('')}</div>` : ''}
+          </div>
+        </article>`).join('');
+      H.reveal(mount);
+    } catch { /* the static fallback stays */ }
+  }
+
+  function inits(name) {
+    return String(name || '').trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'LS';
+  }
+
   async function loadServices() {
     const mount = H.qs('#home-services');
     if (!mount) return;
@@ -101,6 +137,6 @@
   /* the announcement bar is owned by core.js so every page behaves the same */
 
   document.addEventListener('DOMContentLoaded', () => {
-    loadServices(); loadReviews(); loadNextSlot();
+    loadServices(); loadTeam(); loadReviews(); loadNextSlot();
   });
 })();

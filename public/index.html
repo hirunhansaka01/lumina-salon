@@ -14,9 +14,9 @@
 <link rel="icon" href="/assets/favicon.svg?v=75b4e0c3" type="image/svg+xml" />
 <link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2?v=066710ce" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2?v=d5c53a50" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="/assets/css/style.css?v=50a4ba14" />
+<link rel="stylesheet" href="/assets/css/style.css?v=9a8fdcd8" />
 <script defer src="/assets/js/core.js?v=fbe61532"></script>
-<script defer src="/assets/js/home.js?v=dee16da2"></script>
+<script defer src="/assets/js/home.js?v=5f0fbae8"></script>
 </head>
 <body>
 <a href="#main" class="sr-only">Skip to content</a>
@@ -252,28 +252,28 @@
           </div>
         </div>
 
-        <div class="grid grid-2" id="home-stylists">
-          <article class="card stylist-card reveal">
-            <div class="stylist-photo"><img src="/assets/stylist-elena.jpg?v=14d935e6" alt="Elena Vance, studio lead" loading="lazy" /></div>
-            <div class="stylist-body">
-              <div>
-                <h3 class="headline-sm">Elena Vance</h3>
-                <p class="body-sm">Studio lead · cut &amp; colour</p>
-              </div>
-              <div class="stylist-tags"><span class="chip chip-sm chip-primary">Precision cutting</span><span class="chip chip-sm chip-gold">Balayage</span></div>
-            </div>
-          </article>
-          <article class="card stylist-card reveal">
-            <div class="stylist-photo"><img src="/assets/stylist-marcus.jpg?v=656522cd" alt="Marcus Chen, master colourist" loading="lazy" /></div>
-            <div class="stylist-body">
-              <div>
-                <h3 class="headline-sm">Marcus Chen</h3>
-                <p class="body-sm">Master colourist</p>
-              </div>
-              <div class="stylist-tags"><span class="chip chip-sm chip-plum">Colour correction</span><span class="chip chip-sm chip-gold">Gloss &amp; toner</span></div>
-            </div>
-          </article>
+        <div class="grid grid-2" id="home-stylists" aria-live="polite">
+          <!-- filled from the studio's team list; the cards below are the fallback -->
         </div>
+
+        <noscript>
+          <div class="grid grid-2">
+            <article class="card stylist-card">
+              <div class="stylist-photo"><img src="/assets/stylist-elena.jpg?v=14d935e6" alt="Elena Vance, studio lead" loading="lazy" /></div>
+              <div class="stylist-body">
+                <div><h3 class="headline-sm">Elena Vance</h3><p class="body-sm">Studio lead · cut &amp; colour</p></div>
+                <div class="stylist-tags"><span class="chip chip-sm chip-primary">Precision cutting</span><span class="chip chip-sm chip-gold">Balayage</span></div>
+              </div>
+            </article>
+            <article class="card stylist-card">
+              <div class="stylist-photo"><img src="/assets/stylist-marcus.jpg?v=656522cd" alt="Marcus Chen, master colourist" loading="lazy" /></div>
+              <div class="stylist-body">
+                <div><h3 class="headline-sm">Marcus Chen</h3><p class="body-sm">Master colourist</p></div>
+                <div class="stylist-tags"><span class="chip chip-sm chip-plum">Colour correction</span><span class="chip chip-sm chip-gold">Gloss &amp; toner</span></div>
+              </div>
+            </article>
+          </div>
+        </noscript>
       </div>
     </div>
   </section>

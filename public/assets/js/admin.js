@@ -88,7 +88,7 @@
     });
 
     const initial = (location.hash || '#overview').replace('#', '');
-    navigate(['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'letters', 'email', 'hours', 'settings'].includes(initial) ? initial : 'overview');
+    navigate(['overview', 'appointments', 'services', 'team', 'clients', 'messages', 'announcements', 'letters', 'email', 'hours', 'settings'].includes(initial) ? initial : 'overview');
   }
 
   /* ── router ──────────────────────────────────────────────────── */
@@ -96,6 +96,7 @@
     overview: ['Overview', 'A calm read on today'],
     appointments: ['Appointments', 'Check-in, walk-ins and the day sheet'],
     services: ['Services & pricing', 'Your menu, durations and prices'],
+    team: ['Team', 'Who is behind the chair, and what they do'],
     clients: ['Clients & formulas', 'Notes, history and colour recipes'],
     messages: ['Inbox', 'Enquiries from the website'],
     announcements: ['Announcements', 'What the website says, and when'],
@@ -106,7 +107,7 @@
   };
 
   /* every view this build can actually paint */
-  const VIEW_RENDERERS = ['overview', 'appointments', 'services', 'clients', 'messages', 'announcements', 'letters', 'email', 'hours', 'settings'];
+  const VIEW_RENDERERS = ['overview', 'appointments', 'services', 'team', 'clients', 'messages', 'announcements', 'letters', 'email', 'hours', 'settings'];
 
   async function navigate(view, opts = {}) {
     state.view = view;
@@ -124,6 +125,7 @@
       if (view === 'overview') await renderOverview();
       if (view === 'appointments') await renderAppointments();
       if (view === 'services') await renderServices();
+      if (view === 'team') await renderTeam();
       if (view === 'clients') await renderClients();
       if (view === 'messages') await renderMessages();
       if (view === 'announcements') await renderAnnouncements();
@@ -305,6 +307,11 @@
       </div>`;
   }
 
+  function receiptLink(a) {
+    if (!['completed', 'in_chair'].includes(a.status)) return '';
+    return `<a class="btn btn-sm btn-ghost" href="/receipt?id=${a.id}" target="_blank" rel="noopener">${H.icon('card')}Receipt</a>`;
+  }
+
   function statusActions(a) {
     if (a.status === 'pending') {
       return `<button class="btn btn-sm" data-status="confirmed" data-id="${a.id}">Confirm</button>
@@ -315,9 +322,13 @@
               <button class="btn btn-icon" style="width:34px;height:34px" data-status="cancelled" data-id="${a.id}" title="Cancel">${H.icon('close', 'icon')}</button>`;
     }
     if (a.status === 'in_chair') {
-      return `<button class="btn btn-sm btn-secondary" data-status="completed" data-id="${a.id}">Complete</button>`;
+      return `<button class="btn btn-sm btn-secondary" data-status="completed" data-id="${a.id}">Complete</button>
+              ${receiptLink(a)}`;
     }
-    return `<span class="body-sm dim">${a.status === 'completed' ? 'Paid' : '—'}</span>`;
+    if (a.status === 'completed') {
+      return `<span class="body-sm dim">Paid</span> ${receiptLink(a)}`;
+    }
+    return '<span class="body-sm dim">—</span>';
   }
 
   function bindStatusButton(btn) {
@@ -893,6 +904,10 @@
               <div class="field"><label class="field-label" for="nc-phone">Phone</label><input class="input" id="nc-phone" name="phone" type="tel" /></div>
             </div>
             <div class="field"><label class="field-label" for="nc-notes">Notes</label><textarea class="textarea" id="nc-notes" name="notes" rows="3" style="min-height:80px"></textarea></div>
+            <label class="check-row">
+              <input type="checkbox" id="nc-subscribe" name="subscribe" checked />
+              <span>Send them studio letters too <span class="dim">— adds them to the announcement list, separate from client records</span></span>
+            </label>
             <div class="row-between">
               <button class="btn btn-ghost" type="button" data-close>Cancel</button>
               <button class="btn" type="submit">Add client</button>
@@ -904,8 +919,11 @@
     host.querySelector('#new-client-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
-        await H.api.post('/api/admin/clients', Object.fromEntries(new FormData(e.currentTarget).entries()));
-        H.toast('Client added.');
+        const form = new FormData(e.currentTarget);
+        const payload = Object.fromEntries(form.entries());
+        payload.subscribe = !!e.currentTarget.querySelector('#nc-subscribe').checked;
+        await H.api.post('/api/admin/clients', payload);
+        H.toast(payload.subscribe ? 'Client added and on the studio letters list.' : 'Client added.');
         closeOverlay();
         renderClients();
       } catch (err) { H.toast(err.message, { type: 'error' }); }
@@ -1239,12 +1257,18 @@
       const list = check.count || (check.recipients || []).length;
       if (!list) return H.toast('Nobody has joined the studio letters list yet — there is no one to email.', { type: 'error' });
       if (!confirm(`Email “${a.title}” to ${list} subscriber${list === 1 ? '' : 's'}?\n\nThis goes only to the studio letters list, never to every client in the diary. Each message carries a one-click unsubscribe link.`)) return;
-      b.disabled = true; b.textContent = 'Sending…';
+      b.disabled = true;
+      b.innerHTML = `<span class="spinner" aria-hidden="true"></span>Sending ${list}…`;
+      H.toast(`Sending to ${list} subscriber${list === 1 ? '' : 's'} — this takes a few seconds.`);
       try {
         const r = await H.api.post(`/api/admin/announcements/${a.id}/send`, {});
-        H.toast(`Sent to ${r.sent} subscriber${r.sent === 1 ? '' : 's'}${r.failed ? ` · ${r.failed} failed` : ''}.`);
+        H.toast(`Sent to ${r.sent} subscriber${r.sent === 1 ? '' : 's'}${r.failed ? ` · ${r.failed} failed` : ''}.`, { type: 'success' });
         renderAnnouncements();
-      } catch (err) { H.toast(err.message, { type: 'error' }); b.disabled = false; b.textContent = 'Email to clients'; }
+      } catch (err) {
+        H.toast(err.message, { type: 'error' });
+        b.disabled = false;
+        b.textContent = 'Email to clients';
+      }
     }));
   }
 
@@ -1329,6 +1353,178 @@
   /* ══════════════════════════════════════════════════════════════
      EMAIL — sending account, connection test
      ══════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════
+     TEAM — who is behind the chair
+     ══════════════════════════════════════════════════════════════ */
+  async function renderTeam() {
+    const [{ stylists }, avail] = await Promise.all([
+      H.api.get('/api/admin/stylists'),
+      H.api.get('/api/admin/availability').catch(() => ({ availability: [] })),
+    ]);
+    H.qs('#page-sub').textContent = 'Who is behind the chair, and what they do';
+    const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    const hours = (id) => {
+      const rows = (avail.availability || []).filter((a) => a.stylist_id === id && a.is_working);
+      if (!rows.length) return 'No working days set';
+      const days = rows.map((r) => DAYS[r.weekday]).join(', ');
+      const first = rows[0];
+      return `${days} · ${H.time12(first.start_time)}–${H.time12(first.end_time)}`;
+    };
+
+    main().innerHTML = `
+      <div class="row-between" style="align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <p class="body-md" style="max-width:62ch;margin:0">
+          Anyone active here appears on the homepage, on the booking page and in working hours.
+          Each new stylist starts on Tue–Sat, 9am–7pm with a 1pm break — change it whenever you like.
+        </p>
+        <button class="btn" id="add-stylist">${H.icon('plus')}Add stylist</button>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start">
+        ${stylists.map((t) => `
+          <article class="card" style="padding:0;overflow:hidden">
+            <div class="team-photo" style="position:relative;height:190px;background:var(--surface-2,#F3EFE7)">
+              ${t.avatar_url
+                ? `<img src="${H.esc(t.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover" />`
+                : `<div class="row" style="height:100%;justify-content:center;align-items:center;gap:10px">
+                     <span class="avatar" style="width:56px;height:56px;font-size:18px">${H.esc(t.avatar_initials || H.initials(t.name))}</span>
+                     <span class="body-sm dim">No portrait yet</span>
+                   </div>`}
+              ${t.is_active ? '' : '<span class="chip chip-sm chip-outline" style="position:absolute;top:12px;left:12px;background:#fff">Hidden</span>'}
+            </div>
+            <div style="padding:18px">
+              <div class="row-between" style="align-items:flex-start;gap:10px">
+                <div>
+                  <h3 class="title-md">${H.esc(t.name)}</h3>
+                  <p class="body-sm dim">${H.esc(t.title || 'No title yet')}</p>
+                </div>
+                <span class="chip chip-sm chip-primary">${t.is_active ? 'Active' : 'Hidden'}</span>
+              </div>
+              ${t.bio ? `<p class="body-sm mt-sm" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${H.esc(t.bio)}</p>` : '<p class="body-sm dim mt-sm">No bio yet.</p>'}
+              ${(t.specialties || []).length ? `<div class="stylist-tags mt-sm">${t.specialties.map((x) => `<span class="chip chip-sm chip-gold">${H.esc(x)}</span>`).join('')}</div>` : ''}
+              <p class="body-sm dim mt-md">${H.icon('clock','icon')} ${hours(t.id)}</p>
+              <div class="row gap-sm row-wrap mt-md">
+                <button class="btn btn-sm btn-outline" data-edit-stylist="${t.id}">Edit</button>
+                <button class="btn btn-sm btn-ghost" data-hours-stylist="${t.id}">Working hours</button>
+                <button class="btn btn-sm btn-ghost" data-toggle-stylist="${t.id}">${t.is_active ? 'Hide' : 'Show'}</button>
+              </div>
+            </div>
+          </article>`).join('')}
+      </div>`;
+
+    H.qs('#add-stylist').addEventListener('click', () => openStylist());
+    H.qsa('[data-edit-stylist]').forEach((b) => b.addEventListener('click', () => openStylist(stylists.find((t) => t.id === b.dataset.editStylist))));
+    H.qsa('[data-hours-stylist]').forEach((b) => b.addEventListener('click', () => navigate('hours')));
+    H.qsa('[data-toggle-stylist]').forEach((b) => b.addEventListener('click', async () => {
+      const t = stylists.find((x) => x.id === b.dataset.toggleStylist);
+      await H.api.patch(`/api/admin/stylists/${t.id}`, { is_active: !t.is_active });
+      H.toast(t.is_active ? `${t.name} is hidden from the website.` : `${t.name} is back on the website.`);
+      renderTeam();
+    }));
+  }
+
+  function openStylist(t) {
+    const isEdit = !!t;
+    const d = t || { name: '', title: '', bio: '', specialties: [], avatar_url: null };
+    const host = H.el(`
+      <div class="modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stylist-title" style="max-width:640px">
+          <button class="btn btn-icon modal-close" data-close aria-label="Close">${H.icon('close')}</button>
+          <h2 class="headline-md" id="stylist-title">${isEdit ? 'Edit ' + H.esc(d.name.split(' ')[0]) : 'Add a stylist'}</h2>
+          <p class="body-sm dim mt-sm">A portrait makes a real difference — it shows on the homepage and next to their name when booking.</p>
+
+          <form class="stack gap-md mt-lg" id="stylist-form">
+            <div class="row gap-md" style="align-items:flex-start">
+              <div class="team-upload" style="width:120px;flex:0 0 120px">
+                <div id="stylist-photo-preview" style="width:120px;height:120px;border-radius:50%;overflow:hidden;background:var(--surface-2,#F3EFE7);display:grid;place-items:center">
+                  ${d.avatar_url
+                    ? `<img src="${H.esc(d.avatar_url)}" alt="" style="width:100%;height:100%;object-fit:cover" />`
+                    : `<span class="avatar" style="width:56px;height:56px">${H.esc(d.avatar_initials || H.initials(d.name || 'New'))}</span>`}
+                </div>
+                <label class="btn btn-sm btn-outline mt-sm" style="width:100%;justify-content:center;cursor:pointer">
+                  ${d.avatar_url ? 'Change' : 'Upload'}
+                  <input type="file" id="stylist-photo" accept="image/jpeg,image/png,image/webp,image/avif" hidden />
+                </label>
+                ${d.avatar_url ? `<button type="button" class="btn btn-sm btn-ghost mt-sm" id="stylist-photo-remove" style="width:100%;justify-content:center">Remove</button>` : ''}
+              </div>
+              <div class="stack gap-md flex-1" style="min-width:0">
+                <div class="field"><label class="field-label" for="st-name">Name</label>
+                  <input class="input" id="st-name" name="name" value="${H.esc(d.name)}" placeholder="Amara Silva" required /></div>
+                <div class="field"><label class="field-label" for="st-title">Job title</label>
+                  <input class="input" id="st-title" name="title" value="${H.esc(d.title || '')}" placeholder="Senior stylist · Colour" /></div>
+              </div>
+            </div>
+
+            <div class="field"><label class="field-label" for="st-bio">Short bio</label>
+              <textarea class="textarea" id="st-bio" name="bio" rows="3" style="min-height:84px"
+                placeholder="Two or three sentences clients would enjoy reading.">${H.esc(d.bio || '')}</textarea></div>
+
+            <div class="field"><label class="field-label" for="st-spec">Specialties</label>
+              <input class="input" id="st-spec" name="specialties" value="${H.esc((d.specialties || []).join(', '))}" placeholder="Balayage, Curl shaping, Bridal" />
+              <span class="field-hint">Comma separated, up to six. They show as little tags on the homepage.</span></div>
+
+            ${isEdit ? `<div class="field"><label class="field-label" for="st-order">Order on the website</label>
+              <input class="input" id="st-order" name="sort_order" type="number" value="${d.sort_order || 0}" />
+              <span class="field-hint">Lower numbers appear first.</span></div>` : ''}
+
+            <div class="row-between">
+              <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+              <button class="btn" type="submit" id="stylist-save">${isEdit ? 'Save changes' : 'Add stylist'}</button>
+            </div>
+          </form>
+        </div>
+      </div>`);
+    openOverlay(host);
+
+    let pendingPhoto = null;
+    host.querySelector('#stylist-photo').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 4 * 1024 * 1024) return H.toast('That image is over 4 MB — please compress it.', { type: 'error' });
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingPhoto = reader.result;
+        host.querySelector('#stylist-photo-preview').innerHTML = `<img src="${pendingPhoto}" alt="" style="width:100%;height:100%;object-fit:cover" />`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    host.querySelector('#stylist-photo-remove')?.addEventListener('click', async () => {
+      if (!isEdit) return;
+      await H.api.del(`/api/admin/stylists/${d.id}/photo`);
+      pendingPhoto = null;
+      host.querySelector('#stylist-photo-preview').innerHTML = `<span class="avatar" style="width:56px;height:56px">${H.esc(d.avatar_initials || H.initials(d.name))}</span>`;
+      H.toast('Portrait removed.');
+      renderTeam();
+    });
+
+    host.querySelector('#stylist-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = host.querySelector('#stylist-save');
+      btn.disabled = true;
+      const payload = Object.fromEntries(new FormData(e.currentTarget).entries());
+      try {
+        let stylist;
+        if (isEdit) {
+          stylist = (await H.api.patch(`/api/admin/stylists/${d.id}`, payload)).stylist;
+        } else {
+          const r = await H.api.post('/api/admin/stylists', payload);
+          stylist = r.stylist;
+        }
+        if (pendingPhoto) {
+          await H.api.post(`/api/admin/stylists/${stylist.id}/photo`, { dataUrl: pendingPhoto });
+        }
+        H.toast(isEdit ? 'Saved — the website updates immediately.' : `${stylist.name} added. Set their working hours next.`);
+        closeOverlay();
+        renderTeam();
+      } catch (err) {
+        H.toast(err.message, { type: 'error' });
+        btn.disabled = false;
+      }
+    });
+  }
+
   /* ── Studio letters: the separate mailing list ──────────────── */
   async function renderLetters() {
     const data = await H.api.get('/api/admin/subscribers');
@@ -1350,7 +1546,10 @@
         <td><span class="chip chip-sm ${x.status === 'active' ? 'chip-primary' : 'chip-outline'}">${x.status === 'active' ? 'Subscribed' : 'Unsubscribed'}</span></td>
         <td class="body-sm dim">${H.esc(prettySource(x.source))}</td>
         <td class="body-sm dim tabular">${H.esc(fmtDay(x.created_at))}</td>
-        <td style="text-align:right">
+        <td style="text-align:right;white-space:nowrap">
+          ${x.status === 'active'
+            ? `<button class="btn btn-sm btn-ghost" data-unsub-by-hand="${x.id}">Unsubscribe</button>`
+            : `<button class="btn btn-sm btn-ghost" data-resub-by-hand="${x.id}">Put back on list</button>`}
           <button class="btn btn-icon" style="width:34px;height:34px" data-del-sub="${x.id}" title="Remove from list">${H.icon('trash','icon')}</button>
         </td>
       </tr>`;
@@ -1391,9 +1590,10 @@
       <section class="card">
         <div class="row-between" style="align-items:center;gap:12px;flex-wrap:wrap">
           <h2 class="title-lg">Subscribed <span class="body-sm dim">(${active.length})</span></h2>
-          <div class="row gap-sm">
-            <input class="input" id="sub-search" type="search" placeholder="Filter by email" style="max-width:220px" />
+          <div class="row gap-sm row-wrap">
+            <input class="input" id="sub-search" type="search" placeholder="Filter by email" style="max-width:200px" />
             <button class="btn btn-sm btn-outline" id="sub-export">${H.icon('arrow')}Copy all emails</button>
+            <button class="btn btn-sm" id="sub-add">${H.icon('plus')}Add emails</button>
           </div>
         </div>
         ${active.length ? `
@@ -1414,11 +1614,30 @@
       </section>`;
 
     H.qsa('[data-del-sub]').forEach((b) => b.addEventListener('click', async () => {
-      if (!confirm('Remove this address from the list completely?')) return;
+      if (!confirm('Remove this address from the list completely? Unsubscribing keeps a record; this deletes it.')) return;
       await H.api.del(`/api/admin/subscribers/${b.dataset.delSub}`);
       H.toast('Removed from the list.');
       renderLetters();
     }));
+
+    H.qsa('[data-unsub-by-hand]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm('Unsubscribe this address? They will not receive studio letters again unless they rejoin.')) return;
+      try {
+        const r = await H.api.post(`/api/admin/subscribers/${b.dataset.unsubByHand}/unsubscribe`, {});
+        H.toast(r.message);
+        renderLetters();
+      } catch (err) { H.toast(err.message, { type: 'error' }); }
+    }));
+
+    H.qsa('[data-resub-by-hand]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        const r = await H.api.post(`/api/admin/subscribers/${b.dataset.resubByHand}/resubscribe`, {});
+        H.toast(r.message);
+        renderLetters();
+      } catch (err) { H.toast(err.message, { type: 'error' }); }
+    }));
+
+    H.qs('#sub-add')?.addEventListener('click', openAddSubscribers);
 
     const search = H.qs('#sub-search');
     if (search) search.addEventListener('input', () => {
@@ -1437,6 +1656,52 @@
     });
   }
 
+  function openAddSubscribers() {
+    const host = H.el(`
+      <div class="modal-backdrop">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sub-add-title">
+          <button class="btn btn-icon modal-close" data-close aria-label="Close">${H.icon('close')}</button>
+          <h2 class="headline-md" id="sub-add-title">Add to studio letters</h2>
+          <p class="body-sm dim mt-sm">
+            Anyone not already on the list gets added and starts receiving announcements.
+            Nobody in your <strong>Clients</strong> list is touched — this is only the mailing list.
+          </p>
+          <form class="stack gap-md mt-lg" id="sub-add-form">
+            <div class="field"><label class="field-label" for="sub-one">One address</label>
+              <input class="input" id="sub-one" type="email" placeholder="name@example.com" />
+              <span class="field-hint">Press “Add emails” and it is done.</span></div>
+            <div class="field"><label class="field-label" for="sub-many">Or paste several</label>
+              <textarea class="textarea" id="sub-many" rows="5" style="min-height:110px"
+                placeholder="one@example.com&#10;two@example.com&#10;three@example.com"></textarea>
+              <span class="field-hint">One per line, or separated by commas. Duplicates and addresses already on the list are skipped.</span></div>
+            <div class="row-between">
+              <button class="btn btn-ghost" type="button" data-close>Cancel</button>
+              <button class="btn" type="submit">Add emails</button>
+            </div>
+          </form>
+        </div>
+      </div>`);
+    openOverlay(host);
+    host.querySelector('#sub-add-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const one = host.querySelector('#sub-one').value.trim();
+      const many = host.querySelector('#sub-many').value.trim();
+      const combined = [one, many].filter(Boolean).join('\n');
+      if (!combined) return H.toast('Type at least one email address.', { type: 'error' });
+      const btn = e.currentTarget.querySelector('button[type=submit]');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      try {
+        const r = await H.api.post('/api/admin/subscribers', { emails: combined });
+        H.toast(r.message, { type: r.added.length ? 'success' : 'error' });
+        closeOverlay();
+        renderLetters();
+      } catch (err) {
+        H.toast(err.message, { type: 'error' });
+        btn.disabled = false; btn.textContent = 'Add emails';
+      }
+    });
+  }
+
   function prettySource(source) {
     return ({
       footer: 'Footer box',
@@ -1445,6 +1710,7 @@
       'footer-booking': 'Footer — booking',
       'footer-contact': 'Footer — contact',
       website: 'Footer box',
+      studio: 'Added by the studio',
       booking: 'Booking checkbox',
       contact: 'Contact form',
     })[source] || (source ? source.replace(/-/g, ' ') : 'Website');

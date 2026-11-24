@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Receipt — Lumina Salon</title>
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="/assets/favicon.svg?v=75b4e0c3" type="image/svg+xml" />
+<link rel="preload" href="/assets/fonts/fraunces-latin-1.woff2?v=066710ce" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/assets/fonts/dm-sans-latin-1.woff2?v=d5c53a50" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="/assets/css/style.css?v=9a8fdcd8" />
+<script defer src="/assets/js/core.js?v=fbe61532"></script>
+<script defer src="/assets/js/receipt.js?v=747dd2c1"></script>
+</head>
+<body class="receipt-body">
+
+<div class="receipt-toolbar" id="receipt-toolbar">
+  <a class="btn btn-sm btn-ghost" href="/admin#appointments">Back to appointments</a>
+  <div class="row gap-sm">
+    <label class="check-row body-sm" style="margin:0">
+      <input type="checkbox" id="receipt-show-notes" />
+      <span>Show client notes</span>
+    </label>
+    <button class="btn btn-sm" id="receipt-print">Print / save as PDF</button>
+  </div>
+</div>
+
+<main id="receipt-root" aria-live="polite">
+  <p class="receipt-loading">Preparing the receipt…</p>
+</main>
+
+</body>
+</html>

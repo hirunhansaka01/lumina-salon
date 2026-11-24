@@ -61,6 +61,8 @@ app.get('/:page', (req, res, next) => {
   if (pages.includes(page)) return res.sendFile(path.join(pub, `${page}.html`));
   /* /unsubscribe?token=... — a page of its own so the emailed link always resolves */
   if (page === 'unsubscribe') return res.sendFile(path.join(pub, 'unsubscribe.html'));
+  /* /receipt?id=... — one printable invoice */
+  if (page === 'receipt') return res.sendFile(path.join(pub, 'receipt.html'));
   next();
 });
 

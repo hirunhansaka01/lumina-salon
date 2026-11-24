@@ -361,6 +361,15 @@ router.post('/clients', wrap(async (req, res) => {
     total_spent_cents: 0,
   }).select('*').single();
 
+  /* a client added by hand can join the letters list, if the studio says so */
+  if (b.subscribe && !email.endsWith('@luminasalon.local') && EMAIL_RE.test(email)) {
+    const { data: onList } = await db.from('subscribers').select('id,status').eq('email', email).maybeSingle();
+    if (!onList) await db.from('subscribers').insert({ email, name: data.name, source: 'studio', status: 'active' }).then(() => {}).catch(() => {});
+    else if (onList.status !== 'active') {
+      await db.from('subscribers').update({ status: 'active', unsubscribed_at: null }).eq('id', onList.id).then(() => {}).catch(() => {});
+    }
+  }
+
   await log(req.user, 'client_created', data.name);
   res.status(201).json({ ok: true, client: data });
 }));
@@ -451,6 +460,118 @@ router.delete('/services/:id', wrap(async (req, res) => {
 }));
 
 /* ─────────────────────────── Availability ─────────────────────────── */
+
+/* ─────────────────────────── The team ─────────────────────────── */
+
+/** Deactivate rather than delete: their history must stay intact. */
+router.get('/stylists', wrap(async (_req, res) => {
+  const { data } = await db
+    .from('stylists')
+    .select('id,name,slug,title,bio,specialties,avatar_url,avatar_initials,rating,is_active,sort_order')
+    .order('sort_order');
+  res.json({ ok: true, stylists: data || [] });
+}));
+
+function slugFor(name, existing = []) {
+  const base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'stylist';
+  let slug = base;
+  let n = 2;
+  while (existing.includes(slug)) slug = `${base}-${n++}`;
+  return slug;
+}
+
+function nameInitials(name) {
+  return String(name || '')
+    .trim().split(/\s+/).slice(0, 2)
+    .map((w) => w[0] || '').join('').toUpperCase() || 'LS';
+}
+
+function teamFields(body) {
+  const b = body || {};
+  const patch = {};
+  if ('name' in b) patch.name = clean(b.name, 120);
+  if ('title' in b) patch.title = clean(b.title, 120) || null;
+  if ('bio' in b) patch.bio = clean(b.bio, 1200) || null;
+  if ('specialties' in b) {
+    const list = Array.isArray(b.specialties) ? b.specialties : String(b.specialties || '').split(',');
+    patch.specialties = list.map((x) => clean(x, 40)).filter(Boolean).slice(0, 6);
+  }
+  if ('sort_order' in b) patch.sort_order = Number(b.sort_order) || 0;
+  if ('is_active' in b) patch.is_active = !!b.is_active;
+  return patch;
+}
+
+router.post('/stylists', wrap(async (req, res) => {
+  const b = req.body || {};
+  const patch = teamFields(b);
+  if (!patch.name) throw new ApiError(400, 'A name is required.', 'VALIDATION');
+
+  const { data: all } = await db.from('stylists').select('slug,sort_order');
+  const maxOrder = Math.max(0, ...(all || []).map((x) => x.sort_order || 0));
+
+  const { data } = await db
+    .from('stylists')
+    .insert({
+      ...patch,
+      slug: slugFor(patch.name, (all || []).map((x) => x.slug)),
+      avatar_initials: nameInitials(patch.name),
+      is_active: patch.is_active !== false,
+      sort_order: patch.sort_order || maxOrder + 10,
+    })
+    .select('*')
+    .single();
+
+  /* a new chair with no hours would never show a bookable slot */
+  const DAYS = [1, 2, 3, 4, 5]; // Tue–Sat, the studio's week
+  await db.from('stylist_availability').insert(
+    DAYS.map((weekday) => ({
+      stylist_id: data.id,
+      weekday,
+      is_working: true,
+      start_time: '09:00',
+      end_time: '19:00',
+      break_start: '13:00',
+      break_end: '13:30',
+    }))
+  ).then(() => {}).catch(() => {});
+
+  await log(req.user, 'stylist_added', data.name);
+  res.status(201).json({
+    ok: true,
+    stylist: data,
+    message: `${data.name} joined the team. Their first week is Tue–Sat, 9am–7pm — adjust it in Working hours.`,
+  });
+}));
+
+router.patch('/stylists/:id', wrap(async (req, res) => {
+  const patch = teamFields(req.body);
+  if ('name' in patch && !patch.name) throw new ApiError(400, 'A name is required.', 'VALIDATION');
+  if (patch.name) patch.avatar_initials = nameInitials(patch.name);
+
+  const { data } = await db.from('stylists').update(patch).eq('id', req.params.id).select('*').single();
+  await log(req.user, 'stylist_updated', data.name);
+  res.json({ ok: true, stylist: data });
+}));
+
+/** Portrait upload — same storage bucket as service photos. */
+router.post('/stylists/:id/photo', wrap(async (req, res) => {
+  const dataUrl = (req.body || {}).dataUrl;
+  const { data: stylist } = await db.from('stylists').select('id,name').eq('id', req.params.id).maybeSingle();
+  if (!stylist) throw new ApiError(404, 'That stylist is no longer here.');
+
+  const upload = await storage.uploadDataUrl(dataUrl, `stylist-${stylist.name}`);
+  if (!upload.ok) throw new ApiError(400, upload.error, 'UPLOAD_FAILED');
+
+  const { data } = await db.from('stylists').update({ avatar_url: upload.url }).eq('id', stylist.id).select('*').single();
+  await log(req.user, 'stylist_photo_updated', `${stylist.name} → ${upload.path}`);
+  res.json({ ok: true, stylist: data, url: upload.url, message: 'Portrait updated — it shows on the homepage and the booking page.' });
+}));
+
+/** Remove a portrait and fall back to initials. */
+router.delete('/stylists/:id/photo', wrap(async (req, res) => {
+  const { data } = await db.from('stylists').update({ avatar_url: null }).eq('id', req.params.id).select('*').single();
+  res.json({ ok: true, stylist: data });
+}));
 
 router.get('/availability', wrap(async (_req, res) => {
   const [{ data: stylists }, { data: rows }] = await Promise.all([
@@ -673,8 +794,8 @@ router.post('/announcements/:id/send', wrap(async (req, res) => {
 
   const settings = await getSettings(true);
   const studio = await studioContext(settings);
-  let sent = 0; const failures = [];
-  for (const sub of recipients) {
+
+  const sendOne = async (sub) => {
     const unsubUrl = `${studio.url}/unsubscribe?token=${encodeURIComponent(sub.token)}`;
     const result = await mailer.send({
       to: sub.email,
@@ -698,10 +819,22 @@ router.post('/announcements/:id/send', wrap(async (req, res) => {
       },
     });
     if (result.ok) {
-      sent += 1;
-      await db.from('subscribers').update({ last_sent_at: new Date().toISOString() }).eq('id', sub.id);
-    } else {
-      failures.push({ email: sub.email, error: result.error });
+      await db.from('subscribers').update({ last_sent_at: new Date().toISOString() }).eq('id', sub.id).then(() => {}).catch(() => {});
+      return { ok: true, email: sub.email };
+    }
+    return { ok: false, email: sub.email, error: result.error };
+  };
+
+  /* Gmail throttles a single connection, so send in small parallel waves
+     instead of one-at-a-time — a 100-person list takes seconds, not minutes. */
+  const WAVE = 4;
+  let sent = 0; const failures = [];
+  for (let i = 0; i < recipients.length; i += WAVE) {
+    const batch = recipients.slice(i, i + WAVE);
+    const results = await Promise.all(batch.map(sendOne));
+    for (const r of results) {
+      if (r.ok) sent += 1;
+      else failures.push({ email: r.email, error: r.error });
     }
   }
   const wasTest = !!(body.to);
@@ -734,11 +867,144 @@ router.get('/subscribers', wrap(async (req, res) => {
   });
 }));
 
+/**
+ * Add addresses by hand — a walk-in client, a friend of the studio, a list
+ * collected on paper. One at a time or a pasted block, both land here.
+ */
+router.post('/subscribers', wrap(async (req, res) => {
+  const b = req.body || {};
+  const raw = Array.isArray(b.emails) ? b.emails.join('\n') : String(b.email || b.emails || '');
+  const candidates = [...new Set(
+    raw.split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
+  )].slice(0, 300);
+
+  if (!candidates.length) throw new ApiError(400, 'Add at least one email address.', 'VALIDATION');
+
+  const added = [];
+  const already = [];
+  const invalid = [];
+
+  for (const email of candidates) {
+    if (!EMAIL_RE.test(email)) { invalid.push(email); continue; }
+    const { data: existing } = await db.from('subscribers').select('id,status').eq('email', email).maybeSingle();
+    if (existing) {
+      if (existing.status === 'active') { already.push(email); continue; }
+      await db.from('subscribers').update({ status: 'active', unsubscribed_at: null, source: 'studio' }).eq('id', existing.id);
+      added.push(email);
+      continue;
+    }
+    await db.from('subscribers').insert({ email, source: 'studio', name: clean(b.name, 120) || null, status: 'active' });
+    added.push(email);
+  }
+
+  if (added.length) await log(req.user, 'subscribers_added', `${added.length} address${added.length === 1 ? '' : 'es'}`);
+  res.status(added.length ? 201 : 200).json({
+    ok: true,
+    added,
+    already_on_list: already,
+    invalid,
+    message: added.length
+      ? `Added ${added.length} address${added.length === 1 ? '' : 'es'}${already.length ? ` · ${already.length} were already on the list` : ''}${invalid.length ? ` · ${invalid.length} looked invalid` : ''}.`
+      : `Nothing added — ${already.length ? 'all already on the list' : 'no valid addresses'}${invalid.length ? ` · ${invalid.length} invalid` : ''}.`,
+  });
+}));
+
+/** Switch someone off by hand, exactly as if they had pressed unsubscribe. */
+router.post('/subscribers/:id/unsubscribe', wrap(async (req, res) => {
+  const { data } = await db
+    .from('subscribers')
+    .update({ status: 'unsubscribed', unsubscribed_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .select('email')
+    .maybeSingle();
+  if (!data) throw new ApiError(404, 'That address is no longer on the list.');
+  await log(req.user, 'subscriber_unsubscribed_by_studio', data.email);
+  res.json({ ok: true, message: `${data.email} will not receive studio letters.` });
+}));
+
+/** Put someone back on the list. */
+router.post('/subscribers/:id/resubscribe', wrap(async (req, res) => {
+  const { data } = await db
+    .from('subscribers')
+    .update({ status: 'active', unsubscribed_at: null })
+    .eq('id', req.params.id)
+    .select('email')
+    .maybeSingle();
+  if (!data) throw new ApiError(404, 'That address is no longer on the list.');
+  await log(req.user, 'subscriber_resubscribed_by_studio', data.email);
+  res.json({ ok: true, message: `${data.email} is back on the studio letters list.` });
+}));
+
 /** Remove someone from the list entirely. */
 router.delete('/subscribers/:id', wrap(async (req, res) => {
   const { data } = await db.from('subscribers').delete().eq('id', req.params.id).select('email').maybeSingle();
   if (data) await log(req.user, 'subscriber_deleted', data.email);
   res.json({ ok: true });
+}));
+
+/* ─────────────────────────── Receipts ─────────────────────────── */
+
+const PAYMENT_METHODS = ['Card', 'Cash', 'Bank transfer', 'Voucher', 'Pay in studio'];
+
+/**
+ * Everything a printed receipt needs, in one round trip.
+ * Notes stay private unless the studio ticks "show notes" on the printout.
+ */
+router.get('/appointments/:id/receipt', wrap(async (req, res) => {
+  const { data: a } = await db
+    .from('appointments')
+    .select('id,reference,appointment_date,time,end_time,duration_minutes,price_cents,status,notes,source,created_at,completed_at,clients(name,email,phone),services(name,category,duration_minutes,price_cents),stylists(name,title)')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (!a) throw new ApiError(404, 'That appointment no longer exists.');
+
+  const settings = await getSettings();
+  const studio = await studioContext(settings);
+
+  const service = a.services || {};
+  const stylist = a.stylists || {};
+  const client = a.clients || {};
+  const price = Number(a.price_cents) || 0;
+  const linePrice = Number(service.price_cents) || price;
+
+  res.json({
+    ok: true,
+    receipt: {
+      number: String(a.reference || a.id.slice(0, 8)).toUpperCase(),
+      issued_at: a.completed_at || a.created_at,
+      appointment: {
+        id: a.id,
+        date: a.appointment_date,
+        time: a.time,
+        end_time: a.end_time,
+        status: a.status,
+        booked_via: a.source,
+        notes: a.notes || null,
+      },
+      client: { name: client.name || 'Walk-in', email: client.email || '', phone: client.phone || '' },
+      stylist: { name: stylist.name || '', title: stylist.title || '' },
+      items: [{
+        description: service.name || 'Salon service',
+        detail: [service.category, stylist.name].filter(Boolean).join(' · '),
+        duration_minutes: a.duration_minutes || service.duration_minutes || 0,
+        qty: 1,
+        unit_cents: linePrice,
+        total_cents: price,
+      }],
+      subtotal_cents: price,
+      discount_cents: 0,
+      total_cents: price,
+      paid: ['completed', 'in_chair'].includes(a.status),
+      payment_methods: PAYMENT_METHODS,
+      studio: {
+        name: studio.name,
+        address: studio.address,
+        phone: studio.phone,
+        email: studio.email,
+        url: studio.url,
+      },
+    },
+  });
 }));
 
 /* ─────────────────────────── Messages & reviews ─────────────────────────── */
